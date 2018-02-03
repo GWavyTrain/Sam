@@ -8,9 +8,9 @@ G = 6.67e-8 # [ cm^3 / ( g * s^2 ) ]
 c = 3.0e10  # [ cm / s ]
 
 # Cosmology
-H0       = 70.4 / 3.086e19 # [ s^(-1) ]
-Omega_m  = 0.3             # [ dimensionless ]
-Omega_L  = 0.7             # [ dimensionless ]
+H0      = 70.4 / 3.086e19 # [ s^(-1) ]
+Omega_m = 0.3             # [ dimensionless ]
+Omega_L = 0.7             # [ dimensionless ]
 
 # Conversion factors
 Msun = 2.0e33          # [ g / Msun ]
@@ -19,9 +19,7 @@ year = 86400.0 * 365.0 # [ s / yr ]
 # Compute luminosity distance
 def integrand( z ):
 
-    E = np.sqrt( Omega_m * ( 1.0 + z )**( 3.0 ) + Omega_L )
-
-    return 1.0 / E
+    return 1.0 / np.sqrt( Omega_m * ( 1.0 + z )**( 3.0 ) + Omega_L )
 
 def D_L( z ):
 
