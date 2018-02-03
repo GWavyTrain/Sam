@@ -10,5 +10,6 @@ plt.title( r'LISA Sensitivity Curve from http://www.srl.caltech.edu/~shane/sensi
 plt.loglog( f , h , 'k-' )
 plt.xlabel( r'$f\,\left[Hz\right]$' )
 plt.ylabel( r'$h_{f}\,\left[Hz^{-1/2}\right]$' )
-plt.show()
+plt.savefig( 'LISA_sensitivity_curve.png' )
+#plt.show()
 
