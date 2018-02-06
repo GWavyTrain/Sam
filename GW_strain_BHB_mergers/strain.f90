@@ -35,8 +35,13 @@ PROGRAM GWstrainFromBHBmergers
       FMTIN  = '(A18,I3,A4)'
       FMTOUT = '(A10,I3,A4)'
     END IF
+<<<<<<< HEAD
     WRITE( FILEIN  , FMTIN  ) 'time_BHillustris1_' , Nz , '.dat'
     WRITE( FILEOUT , FMTOUT ) 'GW_strain_'         , Nz , '.dat'
+=======
+    WRITE( TRIM( FILEIN  ) , FMTIN  ) 'time_BHillustris1_' , Nz , '.dat'
+    WRITE( TRIM( FILEOUT ) , FMTOUT ) 'GW_strain_'         , Nz , '.dat'
+>>>>>>> 80d4433ea92847fe27ed675197ebbdf7995db384
 
     ! --- Get number of lines (mergers) in Illustris data file ---
     nLinesIllustris = 0
