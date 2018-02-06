@@ -12,22 +12,22 @@ PROGRAM GWstrainFromBHBmergers
   REAL(DP)               :: D , LISA(Nf,2)
   INTEGER                :: nLinesIllustris , Nz , i , j
   INTEGER                :: iz = 3 , iM1 = 7 , iM2 = 8
-  CHARACTER( len = 25 )  :: infile
-  CHARACTER( len = 17 )  :: outfile
+  CHARACTER( len = 25 )  :: FILEIN
+  CHARACTER( len = 17 )  :: FILEOUT
   CHARACTER( len = 11 )  :: FMTIN
   CHARACTER( len = 11 )  :: FMTOUT
 
-  ! --- Read in frequencies from LISA sensitivity curve
-  OPEN( 100 , file = 'LISA_sensitivity.dat' )
+  ! --- Read in frequencies from LISA sensitivity curve ---
+  OPEN( 100 , FILE = 'LISA_sensitivity.dat' )
   DO i = 1 , Nf
     READ( 100 , * , END = 10 ) LISA( i , : )
   END DO
   10 CLOSE( 100 )
 
-  ! --- Loop through Illustris snapshots
+  ! --- Loop through Illustris snapshots ---
   DO Nz = 26 , 26!135
 
-    ! --- Get filenames
+    ! --- Get filenames ---
     IF ( Nz < 100 ) THEN
       FMTIN  = '(A18,I2,A4)'
       FMTOUT = '(A10,I2,A4)'
@@ -35,31 +35,31 @@ PROGRAM GWstrainFromBHBmergers
       FMTIN  = '(A18,I3,A4)'
       FMTOUT = '(A10,I3,A4)'
     END IF
-    WRITE( infile  , FMTIN  ) 'time_BHillustris1_' , Nz , '.dat'
-    WRITE( outfile , FMTOUT ) 'GW_strain_'         , Nz , '.dat'
+    WRITE( FILEIN  , FMTIN  ) 'time_BHillustris1_' , Nz , '.dat'
+    WRITE( FILEOUT , FMTOUT ) 'GW_strain_'         , Nz , '.dat'
 
-    ! --- Get number of lines (mergers) in Illustris data file
+    ! --- Get number of lines (mergers) in Illustris data file ---
     nLinesIllustris = 0
-    OPEN( 101 , file = TRIM( infile ) )
+    OPEN( 101 , FILE = TRIM( FILEIN ) )
     DO
       READ( 101 , * , END = 11 )
       nLinesIllustris = nLinesIllustris + 1
     END DO
     11 CLOSE( 101 )
 
-    ! --- Read in Illustris data file
+    ! --- Read in Illustris data file ---
     ALLOCATE( IllustrisData( nLinesIllustris , 10 ) )
-    OPEN( 102 , file = infile )
+    OPEN( 102 , FILE = TRIM( FILEIN ) )
     DO i = 1 , nLinesIllustris
        READ( 102 , * ) IllustrisData( i , : )
     END DO
     CLOSE( 102 )
 
-    ! --- Calculate luminosity distance
+    ! --- Calculate luminosity distance ---
     D = ComputeLuminosityDistance( IllustrisData( 1 , iz ) )
 
-    ! --- Loop through frequencies and calculate strain
-    OPEN( 103 , file = outfile )
+    ! --- Loop through frequencies and calculate strain ---
+    OPEN( 103 , FILE = TRIM( FILEOUT ) )
     DO i = 1 , Nf
       WRITE( 103 , * ) LISA( i , 1 ) , hf( IllustrisData( : , iM1 ) , &
                          IllustrisData( : , iM2 ) , LISA( i , 1 ) )
@@ -72,6 +72,7 @@ PROGRAM GWstrainFromBHBmergers
 
 CONTAINS
 
+  ! --- E(z) in cosmological distance calculation ---
   PURE FUNCTION E( z )
 
     REAL(DP) , INTENT(in) :: z
@@ -86,6 +87,7 @@ CONTAINS
     REAL(DP) , INTENT(in) :: z
     REAL(DP)              :: D_L , dz
 
+    ! --- Integrate with Trapezoidal rule ---
     D_L = 0.0d0
     dz = z / Nq
     
@@ -99,12 +101,14 @@ CONTAINS
     RETURN
   END FUNCTION ComputeLuminosityDistance
   
+  ! --- Monochromatic strain from lecture notes ---
   FUNCTION hf( m1 , m2 , f )
 
     REAL(DP) , INTENT(inout) :: m1(nLinesIllustris) , m2(nLinesIllustris)
     REAL(DP) , INTENT(in)    :: f
     REAL(DP)                 :: Mc(nLinesIllustris) , hf(nLinesIllustris)
 
+    ! --- Compute chirp mass ---
     Mc = ( m1 * m2 )**( 3.0d0 / 5.0d0 ) / ( m1 + m2 )**( 1.0d0 / 5.0d0 ) * Msun
 
     hf =  G / c**2 * Mc / D &
