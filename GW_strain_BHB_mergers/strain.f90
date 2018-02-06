@@ -3,6 +3,7 @@ PROGRAM GWstrainFromBHBmergers
   IMPLICIT NONE
 
   INTEGER  , PARAMETER   :: DP = KIND( 1.d0 ) , Nq = 1000 , Nf = 900
+  INTEGER  , PARAMETER   :: iz = 3 , iM1 = 7 , iM2 = 8
   REAL(DP) , PARAMETER   :: PI = ACOS( -1.0d0 )
   REAL(DP) , PARAMETER   :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
   REAL(DP) , PARAMETER   :: c = 3.0d10 , H0 = 70.4d0 / 3.086d19 , G = 6.67d-8
@@ -11,7 +12,6 @@ PROGRAM GWstrainFromBHBmergers
   REAL(DP) , ALLOCATABLE :: IllustrisData(:,:)
   REAL(DP)               :: D , LISA(Nf,2)
   INTEGER                :: nLinesIllustris , Nz , i , j
-  INTEGER                :: iz = 3 , iM1 = 7 , iM2 = 8
   CHARACTER( len = 25 )  :: FILEIN
   CHARACTER( len = 17 )  :: FILEOUT
   CHARACTER( len = 11 )  :: FMTIN
@@ -59,7 +59,7 @@ PROGRAM GWstrainFromBHBmergers
     ! --- Calculate luminosity distance ---
     D = ComputeLuminosityDistance( IllustrisData( 1 , iz ) )
 
-    ! --- Loop through frequencies and calculate strain ---
+    ! --- Loop through frequencies and calculate mean strain ---
     OPEN( 103 , FILE = TRIM( FILEOUT ) )
     DO i = 1 , Nf
       WRITE( 103 , * ) LISA( i , 1 ) , hf( IllustrisData( : , iM1 ) , &
@@ -103,18 +103,18 @@ CONTAINS
   END FUNCTION ComputeLuminosityDistance
   
   ! --- Monochromatic strain from lecture notes ---
-  FUNCTION hf( m1 , m2 , f )
+  FUNCTION hf( M1 , M2 , f )
 
-    REAL(DP) , INTENT(inout) :: m1(nLinesIllustris) , m2(nLinesIllustris)
-    REAL(DP) , INTENT(in)    :: f
-    REAL(DP)                 :: Mc(nLinesIllustris) , hf(nLinesIllustris)
+    REAL(DP) , INTENT(in) :: M1(nLinesIllustris) , M2(nLinesIllustris) , f
+    REAL(DP)              :: Mc(nLinesIllustris) , hf_all(nLinesIllustris) , hf
 
     ! --- Compute chirp mass ---
-    Mc = ( m1 * m2 )**( 3.0d0 / 5.0d0 ) / ( m1 + m2 )**( 1.0d0 / 5.0d0 ) * Msun
+    Mc = ( M1 * M2 )**( 3.0d0 / 5.0d0 ) / ( M1 + M2 )**( 1.0d0 / 5.0d0 ) * Msun
 
-    hf =  G / c**2 * Mc / D &
+    hf_all =  G / c**2 * Mc / D &
             * ( G / c**3 * PI * f * Mc )**( 2.0d0 / 3.0d0 ) &
-              * SQRT( Tobs )
+            * SQRT( Tobs )
+    hf     = SUM( hf_all ) / SIZE( hf_all )
 
     RETURN
   END FUNCTION hf
