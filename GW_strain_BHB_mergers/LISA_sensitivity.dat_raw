@@ -6,9 +6,9 @@
 # 
 # For this data file:
 # SNR = 1.000000 
-# Armlength = 5.000000e+09 	meters
-# Optics diameter = 0.300000 	meters
-# Wavelength = 1064.000000 	nanometers
+# Armlength = 5.000000e+09  meters
+# Optics diameter = 0.300000    meters
+# Wavelength = 1064.000000  nanometers
 # Laser power = 1.000000 Watts
 # Optical train efficiency = 0.300000 
 # Accleration noise = 3.000000e-15 m/(s^2 root Hz)
@@ -19,7 +19,7 @@
 #
 #
 #
-# f [Hz] 	 hf [Hz^(-1/2)]
+# f [Hz]     hf [Hz^(-1/2)]
 9.765035e-08    8.230539e-12
 9.992561e-08    7.859994e-12
 1.022538e-07    7.506140e-12
@@ -920,3 +920,4 @@
 1.032165e+00    7.245126e-19
 1.035444e+00    7.208922e-19
 1.038733e+00    7.581927e-19
+
