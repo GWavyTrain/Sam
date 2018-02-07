@@ -2,20 +2,20 @@ PROGRAM GWstrainFromBHBmergers
 
   IMPLICIT NONE
 
-  INTEGER  , PARAMETER   :: DP = KIND( 1.d0 ) , Nq = 1000 , Nf = 900
+  INTEGER  , PARAMETER   :: DP = KIND( 1.d0 ) , Nq = 1000000 , Nf = 900
   INTEGER  , PARAMETER   :: iz = 3 , iM1 = 7 , iM2 = 8
   REAL(DP) , PARAMETER   :: PI = ACOS( -1.0d0 )
   REAL(DP) , PARAMETER   :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
-  REAL(DP) , PARAMETER   :: c = 3.0d10 , H0 = 70.4d0 / 3.086d19 , G = 6.67d-8
+  REAL(DP) , PARAMETER   :: c = 3.0d10 , G = 6.67d-8 , H0 = 70.4d0 / 3.086d19
   REAL(DP) , PARAMETER   :: Msun = 2.0d33 , year = 3.1536d7
   REAL(DP) , PARAMETER   :: Tobs = 10.0d0 * year
   REAL(DP) , ALLOCATABLE :: IllustrisData(:,:)
-  REAL(DP)               :: D , LISA(Nf,2)
+  REAL(DP)               :: D , LISA(Nf,2) , hf , hf_min , hf_max
   INTEGER                :: nLinesIllustris , Nz , i , j
   CHARACTER( len = 25 )  :: FILEIN
   CHARACTER( len = 17 )  :: FILEOUT
-  CHARACTER( len = 11 )  :: FMTIN
-  CHARACTER( len = 11 )  :: FMTOUT
+  CHARACTER( len = 11 )  :: FMTIN , FMTOUT
+  CHARACTER( len = 34 )  :: FMT
 
   ! --- Read in frequencies from LISA sensitivity curve ---
   OPEN( 100 , FILE = 'LISA_sensitivity.dat' )
@@ -61,9 +61,15 @@ PROGRAM GWstrainFromBHBmergers
 
     ! --- Loop through frequencies and calculate mean strain ---
     OPEN( 103 , FILE = TRIM( FILEOUT ) )
+    WRITE( 103 , '(A36)' ) '# frequency, hf_mean, hf_min, hf_max'
+    WRITE( 103 , '(F6.3,1x,I6,1x,I1,1x,I1 )' ) &
+      IllustrisData( 1 , iz ) , INT( D / 3.086d24 ) , 0 , 0
+    FMT = '(E11.5,1x,E11.5,1x,E11.5,1x,E11.5)'
     DO i = 1 , Nf
-      WRITE( 103 , * ) LISA( i , 1 ) , hf( IllustrisData( : , iM1 ) , &
-                         IllustrisData( : , iM2 ) , LISA( i , 1 ) )
+      CALL Strain( IllustrisData( : , iM1 ) ,                   &
+                     IllustrisData( : , iM2 ) , LISA( i , 1 ) , &
+                       hf , hf_min , hf_max )
+      WRITE( 103 , FMT ) LISA( i , 1 ) , hf , hf_min , hf_max
     END DO
     CLOSE( 103 )
 
@@ -103,20 +109,24 @@ CONTAINS
   END FUNCTION ComputeLuminosityDistance
   
   ! --- Monochromatic strain from lecture notes ---
-  FUNCTION hf( M1 , M2 , f )
+  SUBROUTINE Strain( M1 , M2 , f , hf , hf_min , hf_max )
 
-    REAL(DP) , INTENT(in) :: M1(nLinesIllustris) , M2(nLinesIllustris) , f
-    REAL(DP)              :: Mc(nLinesIllustris) , hf_all(nLinesIllustris) , hf
+    REAL(DP) , INTENT(in)  :: M1(nLinesIllustris) , M2(nLinesIllustris) , f
+    REAL(DP) , INTENT(out) :: hf , hf_min , hf_max
+    REAL(DP)               :: Mc(nLinesIllustris) , hf_all(nLinesIllustris)
 
     ! --- Compute chirp mass ---
     Mc = ( M1 * M2 )**( 3.0d0 / 5.0d0 ) / ( M1 + M2 )**( 1.0d0 / 5.0d0 ) * Msun
 
-    hf_all =  G / c**2 * Mc / D &
-            * ( G / c**3 * PI * f * Mc )**( 2.0d0 / 3.0d0 ) &
-            * SQRT( Tobs )
+    hf_all = G / c**2 * Mc / D                                 &
+               * ( G / c**3 * PI * f * Mc )**( 2.0d0 / 3.0d0 ) &
+                 * SQRT( Tobs )
+
     hf     = SUM( hf_all ) / SIZE( hf_all )
+    hf_min = MINVAL( hf_all )
+    hf_max = MAXVAL( hf_all )
 
     RETURN
-  END FUNCTION hf
+  END SUBROUTINE Strain
   
 END PROGRAM GWstrainFromBHBmergers
