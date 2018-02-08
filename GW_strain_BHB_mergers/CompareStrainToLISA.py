@@ -26,7 +26,7 @@ plt.loglog( f      , h_max  , 'b-' , label = 'max'  )
 plt.loglog( f      , h      , 'g-' , label = 'mean' )
 plt.loglog( f      , h_min  , 'r-' , label = 'min'  )
 
-plt.text( f_LISA[ 400 ] , h_LISA[ 200 ] , r'$T_{obs}=1\ yr$' , fontsize = 15 )
+plt.text( f_LISA[ 400 ] , h_LISA[ 200 ] , r'$T_{obs}=10\ yr$' , fontsize = 15 )
 plt.text( f_LISA[ 400 ] , h_LISA[ 250 ] , \
             r'$z = %.3f, D_L \approx %i\,Mpc$' % ( z , D * ( 1.0 + z ) ) , \
               fontsize = 15 )
