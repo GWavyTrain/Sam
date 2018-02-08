@@ -11,7 +11,7 @@ plt.title( r'LISA Sensitivity Curve from http://www.srl.caltech.edu/\textasciiti
 plt.loglog( f_LISA , h_LISA , 'k-' )
 
 plt.xlabel( r'$f\,\left[Hz\right]$' )
-plt.ylabel( r'$h_{f}\,\left[Hz^{-1/2}\right]$' )
+plt.ylabel( 'Root spectral Density' )
 
 plt.savefig( 'LISA_sensitivity.png' )
 #plt.show()
