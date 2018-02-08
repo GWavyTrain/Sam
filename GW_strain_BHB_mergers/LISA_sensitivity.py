@@ -8,7 +8,7 @@ if ( len( argv ) > 1 ): Nz = argv[ 1 ]
 else:                   Nz = str( 26 )
 
 f_LISA , h_LISA = np.loadtxt( 'LISA_sensitivity.dat' , unpack = True )
-data  = np.loadtxt( 'GW_strain_' + Nz + '.dat' )
+data  = np.loadtxt( 'StrainDataFiles/GW_strain_' + Nz + '.dat' )
 
 z = data[ 0 , 0 ]
 D = data[ 0 , 1 ]
@@ -34,5 +34,5 @@ plt.xlabel( r'$f\,\left[Hz\right]$' )
 plt.ylabel( r'$h_{f}\,\left[Hz^{-1/2}\right]$' )
 
 plt.legend()
-#plt.savefig( 'LISA_sensitivity_curve.png' )
-plt.show()
+plt.savefig( 'GW_strain_' + Nz + '.png' )
+#plt.show()
