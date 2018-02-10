@@ -13,10 +13,13 @@ data = np.loadtxt( 'StrainDataFiles/GW_strain_' + Nz + '.dat' )
 z = data[ 0 , 0 ]
 D = data[ 0 , 1 ]
 
+year = 60.0 * 60.0 * 24 * 365
+Tobs = 10.0 * year
+
 f     = data[ 1 : , 0 ]
-h     = data[ 1 : , 1 ]
-h_min = data[ 1 : , 2 ]
-h_max = data[ 1 : , 3 ]
+h     = data[ 1 : , 1 ] * np.sqrt( Tobs )
+h_min = data[ 1 : , 2 ] * np.sqrt( Tobs )
+h_max = data[ 1 : , 3 ] * np.sqrt( Tobs )
 
 fig = plt.figure()
 plt.title( r'LISA Sensitivity Curve from http://www.srl.caltech.edu/\textasciitilde shane/sensitivity/MakeCurve.html' )
@@ -34,6 +37,6 @@ plt.xlabel( r'$f\,\left[Hz\right]$' )
 plt.ylabel( r'$h_{c}\,\left[Hz^{-1/2}\right]$' )
 
 plt.legend()
-plt.savefig( 'GW_strain_' + Nz + '.png' )
-#plt.show()
+#plt.savefig( 'GW_strain_' + Nz + '.png' )
+plt.show()
 

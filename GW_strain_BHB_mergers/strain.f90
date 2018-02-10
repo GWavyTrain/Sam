@@ -7,8 +7,7 @@ PROGRAM GWstrainFromBHBmergers
   REAL(DP) , PARAMETER   :: PI = ACOS( -1.0d0 )
   REAL(DP) , PARAMETER   :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
   REAL(DP) , PARAMETER   :: c = 3.0d10 , G = 6.67d-8 , H0 = 70.4d0 / 3.086d19
-  REAL(DP) , PARAMETER   :: Msun = 2.0d33 , year = 3.1536d7
-  REAL(DP) , PARAMETER   :: Tobs = 10.0d0 * year
+  REAL(DP) , PARAMETER   :: Msun = 2.0d33
   REAL(DP) , ALLOCATABLE :: IllustrisData(:,:)
   REAL(DP)               :: D , LISA(Nf,2) , hc , hc_min , hc_max , z
   INTEGER                :: nLinesIllustris , Nz , i , j
@@ -25,7 +24,7 @@ PROGRAM GWstrainFromBHBmergers
   10 CLOSE( 100 )
 
   ! --- Loop through Illustris snapshots ---
-  DO Nz = 135 , 135
+  DO Nz = 26 , 135
 
     OPEN( 200 , FILE = 'Nz.dat' )
       WRITE( 200 , '(I3)' ) Nz
@@ -41,7 +40,7 @@ PROGRAM GWstrainFromBHBmergers
     END IF
 
     WRITE( FILEIN  , FMTIN  ) 'time_BHillustris1_' , Nz , '.dat'
-    WRITE( FILEOUT , FMTOUT ) 'AW_strain_'         , Nz , '.dat'
+    WRITE( FILEOUT , FMTOUT ) 'GW_strain_'         , Nz , '.dat'
 
     ! --- Get number of lines (mergers) in Illustris data file ---
     nLinesIllustris = 0
@@ -111,14 +110,14 @@ CONTAINS
     RETURN
   END FUNCTION ComputeComovingDistance
   
-  ! --- Monochromatic strain from Sesana (2016) ---
+  ! --- Characteristic strain (dimensionless) from Sesana (2016) ---
   SUBROUTINE Strain( M1 , M2 , f , hc , hc_min , hc_max , z )
 
     REAL(DP) , INTENT(in)  :: M1(nLinesIllustris) , M2(nLinesIllustris) , f , z
     REAL(DP) , INTENT(out) :: hc , hc_min , hc_max
     REAL(DP)               :: Mc(nLinesIllustris) , hc_all(nLinesIllustris)
 
-    ! --- Compute chirp mass ---
+    ! --- Compute chirp mass (in source frame) ---
     Mc = ( M1 * M2 )**( 3.0d0 / 5.0d0 ) / ( M1 + M2 )**( 1.0d0 / 5.0d0 ) * Msun
 
     hc_all = 1.0d0 / ( PI * D ) &
