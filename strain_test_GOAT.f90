@@ -2,14 +2,14 @@ PROGRAM GWstrainFromBHBmergers
 
   IMPLICIT NONE
 
-  INTEGER  , PARAMETER  :: DP = KIND( 1.d0 ) , Nq = 1000000 , Nf = 900
-  REAL(DP) , PARAMETER  :: PI = ACOS( -1.0d0 )
-  REAL(DP) , PARAMETER  :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
-  REAL(DP) , PARAMETER  :: c = 3.0d10 , G = 6.67d-8 , H0 = 70.4d0 / 3.086d19
-  REAL(DP) , PARAMETER  :: Msun = 2.0d33 , year = 3.1536d7
-  REAL(DP) , PARAMETER  :: Tobs = 1.0d0 * year
-  REAL(DP)              :: D , LISA(Nf,2) , hc , z
-  INTEGER               :: i
+  INTEGER  , PARAMETER :: DP = KIND( 1.d0 ) , Nq = 1000000 , Nf = 900
+  REAL(DP) , PARAMETER :: PI = ACOS( -1.0d0 )
+  REAL(DP) , PARAMETER :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
+  REAL(DP) , PARAMETER :: c = 3.0d10 , G = 6.67d-8 , H0 = 70.4d0 / 3.086d19
+  REAL(DP) , PARAMETER :: Msun = 2.0d33
+  REAL(DP)             :: D , LISA(Nf,2) , hc
+  REAL(DP)             :: M1 = 1.0d7 , M2 = 1.0d7 , z = 3.0d0
+  INTEGER              :: i
 
   ! --- Read in frequencies from LISA sensitivity curve ---
   OPEN( 100 , FILE = 'LISA_sensitivity.dat' )
@@ -19,14 +19,15 @@ PROGRAM GWstrainFromBHBmergers
   10 CLOSE( 100 )
 
   ! --- Calculate comoving distance ---
-  D = ComputeComovingDistance( 3.0d0 )
+  D = ComputeComovingDistance( z )
 
   ! --- Loop through frequencies and calculate strain ---
-  OPEN( 103 , FILE = 'GOAT_BHB.dat' )
-  WRITE( 103 , * ) 3.0d0 , INT( D / 3.086d24 )
+  OPEN(  103 , FILE = 'GW_strain_GOAT_test.dat' )
+  WRITE( 103 , '(A15)' ) '# frequency, hc'
+  WRITE( 103 , '(F6.3,1x,I6)' ) z , INT( D / 3.086d24 )
   DO i = 1 , Nf
-    CALL Strain( 1.0d7 , 1.0d7 , LISA( i , 1 ) , 3.0d0 , hc )
-    WRITE( 103 , * ) LISA( i , 1 ) , hc
+    hc = Strain( M1 , M2 , LISA( i , 1 ) , z )
+    WRITE( 103 , '(E11.5,1x,E11.5)' ) LISA( i , 1 ) , hc
   END DO
   CLOSE( 103 )
 
@@ -60,14 +61,13 @@ CONTAINS
     RETURN
   END FUNCTION ComputeComovingDistance
   
-  ! --- Characteristic strain amplitude from Sesana (2016) ---
-  SUBROUTINE Strain( M1 , M2 , f , z , hc )
+  ! --- Characteristic strain (dimensionless) from Sesana (2016) ---
+  PURE FUNCTION Strain( M1 , M2 , f , z ) RESULT( hc )
 
-    REAL(DP) , INTENT(in)  :: M1 , M2 , f , z
-    REAL(DP) , INTENT(out) :: hc
-    REAL(DP)               :: Mc
+    REAL(DP) , INTENT(in) :: M1 , M2 , f , z
+    REAL(DP)              :: hc , Mc
 
-    ! --- Compute chirp mass ---
+    ! --- Compute chirp mass (in source frame) ---
     Mc = ( M1 * M2 )**( 3.0d0 / 5.0d0 ) / ( M1 + M2 )**( 1.0d0 / 5.0d0 ) * Msun
 
     hc = 1.0d0 / ( PI * D ) &
@@ -77,6 +77,6 @@ CONTAINS
                  * ( PI * f )**( -1.0d0 / 6.0d0 )
 
     RETURN
-  END SUBROUTINE Strain
+  END FUNCTION Strain
   
 END PROGRAM GWstrainFromBHBmergers
