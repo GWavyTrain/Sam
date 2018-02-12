@@ -13,7 +13,7 @@ data = np.loadtxt( 'StrainDataFiles/GW_strain_' + Nz + '.dat' )
 z = data[ 0 , 0 ]
 D = data[ 0 , 1 ]
 
-year = 60.0 * 60.0 * 24 * 365
+year = 60.0 * 60.0 * 24.0 * 365.0
 Tobs = 10.0 * year
 
 f     = data[ 1 : , 0 ]

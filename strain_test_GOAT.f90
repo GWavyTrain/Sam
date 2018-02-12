@@ -2,7 +2,8 @@ PROGRAM GWstrainFromBHBmergers
 
   IMPLICIT NONE
 
-  INTEGER  , PARAMETER :: DP = KIND( 1.d0 ) , Nq = 1000000 , Nf = 900
+  INTEGER  , PARAMETER :: DP = KIND( 1.d0 ) , Nq = 1000000
+  INTEGER  , PARAMETER :: Nf = 900 , Nc = 22
   REAL(DP) , PARAMETER :: PI = ACOS( -1.0d0 )
   REAL(DP) , PARAMETER :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
   REAL(DP) , PARAMETER :: c = 3.0d10 , G = 6.67d-8 , H0 = 70.4d0 / 3.086d19
@@ -13,16 +14,23 @@ PROGRAM GWstrainFromBHBmergers
 
   ! --- Read in frequencies from LISA sensitivity curve ---
   OPEN( 100 , FILE = 'LISA_sensitivity.dat' )
-  DO i = 1 , Nf
-    READ( 100 , * , END = 10 ) LISA( i , : )
+
+  ! --- Loop through comments
+  DO i = 1 , Nc
+    READ( 100 , * )
   END DO
-  10 CLOSE( 100 )
+ 
+  DO i = 1 , Nf
+    READ( 100 , * ) LISA( i , : )
+  END DO
+ 
+  CLOSE( 100 )
 
   ! --- Calculate comoving distance ---
   D = ComputeComovingDistance( z )
 
   ! --- Loop through frequencies and calculate strain ---
-  OPEN(  103 , FILE = 'GW_strain_GOAT_test.dat' )
+  OPEN(  103 , FILE = 'GW_strain_test_GOAT.dat' )
   WRITE( 103 , '(A15)' ) '# frequency, hc'
   WRITE( 103 , '(F6.3,1x,I6)' ) z , INT( D / 3.086d24 )
   DO i = 1 , Nf
