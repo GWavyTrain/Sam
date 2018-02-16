@@ -9,9 +9,9 @@ PROGRAM GWstrainFromBHBmergers
   REAL(DP) , PARAMETER   :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
   REAL(DP) , PARAMETER   :: c = 3.0d10 , G = 6.67d-8 , H0 = 70.4d0 / 3.086d19
   REAL(DP) , PARAMETER   :: Msun = 2.0d33
-  REAL(DP) , ALLOCATABLE :: IllustrisData(:,:)
+  REAL(DP) , ALLOCATABLE :: IllustrisData(:,:) , R_ISCO(:) , f_ISCO(:)
   REAL(DP)               :: D , LISA(Nf,2) , hc , hc_min , hc_max , z
-  INTEGER                :: nLinesIllustris , Nz , i
+  INTEGER                :: nLinesIllustris , Nz , i , j
   CHARACTER( len = 25 )  :: FILEIN
   CHARACTER( len = 17 )  :: FILEOUT
   CHARACTER( len = 11 )  :: FMTIN , FMTOUT
@@ -71,20 +71,35 @@ PROGRAM GWstrainFromBHBmergers
       ! --- Calculate comoving distance ---
       D = ComputeComovingDistance( IllustrisData( 1 , iz ) )
 
-      ! --- Loop through frequencies and calculate mean strain ---
+      ! --- Calculate the frequency at the ISCO
+      ALLOCATE( R_ISCO( nLinesIllustris ) )
+      ALLOCATE( f_ISCO( nLinesIllustris ) )
+      R_ISCO = 6.0d0 * G / c**2 * Msun &
+                 * MIN( IllustrisData( : , iM1 ) , IllustrisData( : , iM2 ) )
+      f_ISCO = 1.0d0 / ( 2.0d0 * PI )                          &
+                 * SQRT( G * Msun * ( IllustrisData( : , iM1 ) &
+                   + IllustrisData( : , iM2 ) ) / R_ISCO**3 )
+  
+      ! --- Loop through snapshots and calculate strain ---
       OPEN ( 103 , FILE = TRIM( FILEOUT ) )
-      WRITE( 103 , '(A36)' ) '# frequency, hc_mean, hc_min, hc_max'
-      WRITE( 103 , '(F6.3,1x,I6,1x,I1,1x,I1 )' ) &
+      WRITE( 103 , '(A23)' ) '# frequency, hc, M1, M2'
+      WRITE( 103 , '(F13.10,1x,I6,1x,I1,1x,I1 )' ) &
         IllustrisData( 1 , iz ) , INT( D / 3.086d24 ) , 0 , 0
-      FMT = '(E11.5,1x,E11.5,1x,E11.5,1x,E11.5)'
-      DO i = 1 , Nf
-        CALL Strain( IllustrisData( : , iM1 ) ,                   &
-                       IllustrisData( : , iM2 ) , LISA( i , 1 ) , &
-                         hc , hc_min , hc_max , z )
-        WRITE( 103 , FMT ) LISA( i , 1 ) , hc , hc_min , hc_max
+      FMT = '(E11.5,1x,E11.5,1x,F7.4,1x,F7.4)'
+      DO i = 1 , nLinesIllustris
+        j = 1
+        DO WHILE ( LISA( j , 1 ) < f_ISCO( i ) )
+          CALL Strain( IllustrisData( i , iM1 ) , &
+                         IllustrisData( i , iM2 ) , LISA( j , 1 ) , hc )
+          WRITE( 103 , FMT ) LISA( i , 1 ) , hc , IllustrisData( i , iM1 ) , &
+                             IllustrisData( i , iM2 )
+          j = j + 1
+        END DO
       END DO
       CLOSE( 103 )
 
+      DEALLOCATE( R_ISCO)
+      DEALLOCATE( f_ISCO )
       DEALLOCATE( IllustrisData )
 
     END IF
@@ -122,23 +137,18 @@ CONTAINS
   END FUNCTION ComputeComovingDistance
   
   ! --- Characteristic strain (dimensionless) from Sesana (2016) ---
-  SUBROUTINE Strain( M1 , M2 , f , hc , hc_min , hc_max , z )
+  SUBROUTINE Strain( M1 , M2 , f , hc )
 
-    REAL(DP) , INTENT(in)  :: M1(nLinesIllustris) , M2(nLinesIllustris) , f , z
-    REAL(DP) , INTENT(out) :: hc , hc_min , hc_max
-    REAL(DP)               :: Mc(nLinesIllustris) , hc_all(nLinesIllustris)
+    REAL(DP) , INTENT(in)  :: M1 , M2 , f
+    REAL(DP) , INTENT(out) :: hc
+    REAL(DP)               :: Mc
 
     ! --- Compute chirp mass (in source frame) ---
     Mc = ( M1 * M2 )**( 3.0d0 / 5.0d0 ) / ( M1 + M2 )**( 1.0d0 / 5.0d0 ) * Msun
 
-    hc_all = 1.0d0 / ( PI * D ) &
-               * ( 2.0d0 * PI / ( 3.0d0 * c**3 ) )**( 1.0d0 / 2.0d0 ) &
-                 * ( G * Mc )**( 5.0d0 / 6.0d0 )                      &
-                   * ( 1.0d0 + z )**( 1.0d0 / 3.0d0 )                 &
-                     * ( PI * f )**( -1.0d0 / 6.0d0 )
-    hc     = SUM( hc_all ) / SIZE( hc_all )
-    hc_min = MINVAL( hc_all )
-    hc_max = MAXVAL( hc_all )
+    hc = 1.0d0 / ( PI * D ) &
+           * ( 2.0d0 * PI / ( 3.0d0 * c**3 ) )**( 1.0d0 / 2.0d0 ) &
+             * ( G * Mc )**( 5.0d0 / 6.0d0 ) * ( PI * f )**( -1.0d0 / 6.0d0 )
 
     RETURN
   END SUBROUTINE Strain

@@ -2,42 +2,37 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from sys import argv
 
-if ( len( argv ) > 1 ): Nz = argv[ 1 ]
-else:                   Nz = str( 26 )
+# Load in data
+f_LISA , RootPSD_LISA = np.loadtxt( 'LISA_sensitivity.dat' , unpack = True )
+data                  = np.loadtxt( 'GW_strain_test_GOAT.dat' )
 
-f_LISA , h_LISA = np.loadtxt( 'LISA_sensitivity.dat' , unpack = True )
-data = np.loadtxt( 'StrainDataFiles/GW_strain_' + Nz + '.dat' )
+# Compute noise amplitude for LISA
+hn_LISA = np.sqrt( f_LISA ) * RootPSD_LISA
 
+# Get redshift z and comoving distance D
 z = data[ 0 , 0 ]
 D = data[ 0 , 1 ]
 
-year = 60.0 * 60.0 * 24.0 * 365.0
-Tobs = 10.0 * year
+f  = data[ 1 : , 0 ]
+hc = data[ 1 : , 1 ]
 
-f     = data[ 1 : , 0 ]
-h     = data[ 1 : , 1 ] * np.sqrt( Tobs )
-h_min = data[ 1 : , 2 ] * np.sqrt( Tobs )
-h_max = data[ 1 : , 3 ] * np.sqrt( Tobs )
-
+# Plotting
 fig = plt.figure()
 plt.title( r'LISA Sensitivity Curve from http://www.srl.caltech.edu/\textasciitilde shane/sensitivity/MakeCurve.html' )
 
-plt.loglog( f_LISA , h_LISA , 'k-' )
-plt.loglog( f      , h_max  , 'b-' , label = 'max'  )
-plt.loglog( f      , h      , 'g-' , label = 'GOAT' )
-plt.loglog( f      , h_min  , 'r-' , label = 'min'  )
+plt.loglog( f_LISA , hn_LISA , 'k-'                  )
+plt.loglog( f      , hc      , 'b-' , label = 'GOAT' )
 
-plt.text( f_LISA[ 400 ] , h_LISA[ 200 ] , \
-            r'$T_{obs}=%i\,yr$' % int( Tobs / year ) , fontsize = 15 )
-plt.text( f_LISA[ 400 ] , h_LISA[ 250 ] , \
+plt.text( f_LISA[ 300 ] , np.sqrt( f_LISA[ 250 ] ) * RootPSD_LISA[ 250 ] , \
             r'$z = %.3f, D_L \approx %i\,Mpc$' % ( z , D * ( 1.0 + z ) ) , \
               fontsize = 15 )
 plt.xlabel( r'$f\,\left[Hz\right]$' )
-plt.ylabel( r'$h_{c}\,\left[Hz^{-1/2}\right]$' )
+plt.ylabel( r'$h_{c}\,\left[dimensionless\right]$' )
+
+plt.xlim( 1.0e-5  , 2.0     )
+plt.ylim( 1.0e-21 , 1.0e-16 )
 
 plt.legend()
-#plt.savefig( 'GW_strain_' + Nz + '.png' )
 plt.show()
 
