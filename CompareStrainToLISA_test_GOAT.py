@@ -6,17 +6,16 @@ import matplotlib.pyplot as plt
 # Load in data
 f_LISA , RootPSD_LISA = np.loadtxt( 'LISA_sensitivity.dat' , unpack = True )
 data                  = np.loadtxt( 'GW_strain_test_GOAT.dat' )
-data                  = np.loadtxt( 'hc.dat' )
 
 # Compute noise amplitude for LISA
 hn_LISA = np.sqrt( f_LISA ) * RootPSD_LISA
 
 # Get redshift z and comoving distance r
-z = data[ 0 , 0 ]
-r = data[ 0 , 1 ]
+z = data[ 1 , 3 ]
+r = data[ 1 , 4 ]
 
-f  = data[ 1 : , 0 ]
-hc = data[ 1 : , 1 ]
+f  = data[ 0 , 5 : ]
+hc = data[ 1 , 5 : ]
 
 # Plotting
 fig = plt.figure()

@@ -2,48 +2,69 @@ PROGRAM GWstrainFromBHBmergers
 
   IMPLICIT NONE
 
-  INTEGER  , PARAMETER :: DP = KIND( 1.d0 ) , Nq = 1000000
-  INTEGER  , PARAMETER :: Nf = 900 , Nc = 22
-  REAL(DP) , PARAMETER :: PI = ACOS( -1.0d0 )
-  REAL(DP) , PARAMETER :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
-  REAL(DP) , PARAMETER :: c = 3.0d10 , G = 6.67d-8 , H0 = 70.4d0 / 3.086d19
-  REAL(DP) , PARAMETER :: Msun = 2.0d33
-  REAL(DP)             :: D , D_L , LISA(Nf,2) , hc , R_ISCO , f_ISCO
-  REAL(DP)             :: M1 = 1.0d7 , M2 = 1.0d7 , z = 3.0d0
-  INTEGER              :: i
+  INTEGER  , PARAMETER   :: DP = KIND( 1.d0 ) , Nq = 1000000
+  INTEGER  , PARAMETER   :: Nf = 900 , Nc = 22
+  REAL(DP) , PARAMETER   :: PI = ACOS( -1.0d0 )
+  REAL(DP) , PARAMETER   :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
+  REAL(DP) , PARAMETER   :: c = 3.0d10 , G = 6.67d-8 , H0 = 70.4d0 / 3.086d19
+  REAL(DP) , PARAMETER   :: Msun = 2.0d33
+  REAL(DP)               :: r , LISA(Nf,2) , hc , z
+  REAL(DP)               :: f_ISCO , M1 , M2 , Mtot , mu
+  INTEGER                :: i , j
+  INTEGER*8              :: MergerID
+  CHARACTER( len = 50 )  :: FMT
 
   ! --- Read in frequencies from LISA sensitivity curve ---
   OPEN( 100 , FILE = 'LISA_sensitivity.dat' )
-
-  ! --- Loop through comments
+  ! --- Loop through comments ---
   DO i = 1 , Nc
     READ( 100 , * )
   END DO
- 
   DO i = 1 , Nf
     READ( 100 , * ) LISA( i , : )
   END DO
- 
   CLOSE( 100 )
 
-  ! --- Calculate comoving distance ---
-  D = ComputeComovingDistance( z )
+  OPEN ( 101 , FILE = 'GW_strain_test_GOAT.dat' )
+  WRITE( 101 , '(A22)' ) '# ID, M1, M2, z, r, hc(f)'
+  FMT = '(I17,1x,E7.1,1x,E7.1,1x,F13.10,1x,E16.10,900E13.6)'
+  WRITE( 101 , FMT ) 0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0, LISA( : , 1 )
 
-  ! --- Calculate the frequency at the ISCO
-  R_ISCO = 6.0d0 * G * M1 * Msun / c**2
-  f_ISCO = 1.0d0 / ( 2.0d0 * PI ) * SQRT( G * Msun * ( M1 + M2 ) / R_ISCO**3 )
+  ! --- Get redshift ---
+  z = 3.0d0
+
+  ! --- Calculate comoving distance (in cm) ---
+  r = ComputeComovingDistance( z )
+
+  MergerID = 0
+  M1       = 1.0d7
+  M2       = 1.0d7
+
+  ! --- Calculate the frequency at the ISCO ---
+  Mtot   = ( M1 + M2 ) * Msun
+  mu     = M1 * M2 / ( M1 + M2 ) * Msun
+  f_ISCO = c**3 / ( 6.0d0**( 3.0d0 / 2.0d0 ) * PI * G * ( 1.0d0 + z ) ) &
+             * SQRT( ( Mtot + mu ) / Mtot**3 )
+
+  WRITE(*,*) 'f_ISCO:' , f_ISCO
   
-  ! --- Loop through frequencies and calculate strain ---
-  OPEN(  103 , FILE = 'GW_strain_test_GOAT.dat' )
-  WRITE( 103 , '(A15)' ) '# frequency, hc'
-  WRITE( 103 , '(F6.3,1x,I6)' ) z , INT( D / 3.086d24 )
-  i = 1
-  DO WHILE ( LISA( i , 1 ) < f_ISCO )
-    hc = Strain( M1 , M2 , LISA( i , 1 ) , z )
-    WRITE( 103 , '(E11.5,1x,E11.5)' ) LISA( i , 1 ) , hc
-    i = i + 1
+  WRITE( 101 , '(I17,1x,E7.1,1x,E7.1,1x,F13.10,1x,E16.10)' , ADVANCE = 'NO' ) &
+    MergerID , M1 , M2 , z , r / 3.086d24
+  ! --- Loop through frequencies until f_ISCO ---
+  j = 1
+  DO WHILE ( ( LISA( j , 1 ) < f_ISCO ) .AND. ( j < Nf + 1 ) )
+    CALL Strain( M1 , M2 , LISA( j , 1 ) , hc )
+    WRITE( 101 , '(E13.6)' , ADVANCE = 'NO' ) hc
+    j = j + 1
   END DO
-  CLOSE( 103 )
+
+  ! --- Fill in missing frequencies with 0.0d0 ---
+  DO WHILE ( j < Nf + 1 )
+    WRITE( 101 , '(E13.6)' , ADVANCE = 'NO' ) 0.0d0
+    j = j + 1
+  END DO
+       
+  CLOSE( 101 )
 
 CONTAINS
 
@@ -57,38 +78,38 @@ CONTAINS
 
   END FUNCTION E
 
-  FUNCTION ComputeComovingDistance( z ) RESULT( D_C )
+  FUNCTION ComputeComovingDistance( z ) RESULT( r )
 
     REAL(DP) , INTENT(in) :: z
-    REAL(DP)              :: D_C , dz
+    REAL(DP)              :: r , dz
 
     ! --- Integrate with Trapezoidal rule ---
-    D_C = 0.0d0
+    r  = 0.0d0
     dz = z / Nq
     
     DO i = 1 , Nq - 1
-       D_C = D_C + 1.0d0 / E( i * dz )
+       r = r + 1.0d0 / E( i * dz )
     END DO
 
-    D_C = c / H0 * dz / 2.0d0 * ( E( 0.0d0 ) + 2.0d0 * D_C + E( z ) )
+    r = c / H0 * dz / 2.0d0 * ( E( 0.0d0 ) + 2.0d0 * r + E( z ) )
 
     RETURN
   END FUNCTION ComputeComovingDistance
   
-  ! --- Characteristic strain (dimensionless) from Sesana (2016) ---
-  PURE FUNCTION Strain( M1 , M2 , f , z ) RESULT( hc )
+  ! --- Characteristic strain (dimensionless) from Sesana et al. (2005), Eq. (6)
+  SUBROUTINE Strain( M1 , M2 , f , hc )
 
-    REAL(DP) , INTENT(in) :: M1 , M2 , f , z
-    REAL(DP)              :: hc , Mc
+    REAL(DP) , INTENT(in)  :: M1 , M2 , f
+    REAL(DP) , INTENT(out) :: hc
+    REAL(DP)               :: Mc
 
-    ! --- Compute chirp mass (in source frame) ---
+    ! --- Compute chirp mass (in source frame)
     Mc = ( M1 * M2 )**( 3.0d0 / 5.0d0 ) / ( M1 + M2 )**( 1.0d0 / 5.0d0 ) * Msun
 
-    hc = 1.0d0 / ( PI * D )                                       &
-           * ( 2.0d0 * PI / ( 3.0d0 * c**3 ) )**( 1.0d0 / 2.0d0 ) &
-             * ( G * Mc )**( 5.0d0 / 6.0d0 )                      &
-               * ( PI * f )**( -1.0d0 / 6.0d0 )
+    hc = 1.0d0 / ( SQRT( 3.0d0 * c**3 ) * PI**( 2.0d0 / 3.0d0 ) * r ) &
+           * ( G * Mc )**( 5.0d0 / 6.0d0 ) * f**( -1.0d0 / 6.0d0 )
+
     RETURN
-  END FUNCTION Strain
+  END SUBROUTINE Strain
   
 END PROGRAM GWstrainFromBHBmergers
