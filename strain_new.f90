@@ -2,16 +2,17 @@ PROGRAM GWstrainFromBHBmergers
 
   IMPLICIT NONE
 
-  INTEGER  , PARAMETER   :: DP = KIND( 1.d0 ) , Nq = 1000000
+  INTEGER  , PARAMETER   :: DP = KIND( 1.d0 ) , Nq = 1000000 , N = 1000
   INTEGER  , PARAMETER   :: Nf = 400 , Nc = 7
-  INTEGER  , PARAMETER   :: iID = 6 , iz = 3 , iM1 = 7 , iM2 = 8
+  INTEGER  , PARAMETER   :: iID = 6 , iz = 3 , itLB = 10 , iM1 = 7 , iM2 = 8
   REAL(DP) , PARAMETER   :: PI = ACOS( -1.0d0 )
   REAL(DP) , PARAMETER   :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
   REAL(DP) , PARAMETER   :: c = 3.0d10 , G = 6.67d-8 , H0 = 70.4d0 / 3.086d19
-  REAL(DP) , PARAMETER   :: Msun = 2.0d33
+  REAL(DP) , PARAMETER   :: Msun = 2.0d33 , Gyr = 1.0d9 * 86400.0d0 * 365.0d0
   REAL(DP) , ALLOCATABLE :: IllustrisData(:,:)
   REAL(DP)               :: r , LISA(Nf,2) , hc , z
   REAL(DP)               :: f_ISCO , M1 , M2 , Mtot , mu
+  REAL(DP)               :: z_arr(N) , tLB_z(N) , dz , z_max = 13.0d0 , tLB
   INTEGER                :: nLinesIllustris , Nz , i , j
   INTEGER*8              :: MergerID
   CHARACTER( len = 25 )  :: FILEIN
@@ -28,6 +29,28 @@ PROGRAM GWstrainFromBHBmergers
   END DO
   CLOSE( 100 )
 
+  ! --- Create redshift array and compute lookback time ---
+  dz       = z_max / N
+  z_arr(1) = 0.0d0
+  tLB_z(1) = 0.0d0
+  DO i = 2 , N
+    z_arr(i) = z_arr(i-1) + dz
+    !!!!!! Why is this giving a segfault??!?!?!?!?!?!
+    tLB_z(i) = ComputeLookbackTime( z_arr(i) )
+  END DO
+
+  i = 2
+  tLB = ComputeLookbackTime( z_arr(i) )
+  WRITE(*,*) tLB / Gyr
+  tLB = ComputeLookbackTime( z_arr(3) )
+  WRITE(*,*) tLB / Gyr
+  tLB = ComputeLookbackTime( z_arr(4) )
+  WRITE(*,*) tLB / Gyr
+  tLB = ComputeLookbackTime( z_arr(5) )
+  WRITE(*,*) tLB / Gyr
+
+  STOP
+  
   ! --- Create file for storing strains (first row will hold frequencies) ---
   OPEN ( 101 , FILE = 'hc.dat' )
   WRITE( 101 , '(A25)' ) '# ID, M1, M2, z, r, hc(f)'
@@ -127,7 +150,7 @@ CONTAINS
     REAL(DP) , INTENT(in) :: z
     REAL(DP)              :: E
 
-    E = SQRT( OMEGA_M * ( 1.0d0 + z )**3 + OMEGA_L )
+    E = 1.0d0 / SQRT( OMEGA_M * ( 1.0d0 + z )**3 + OMEGA_L )
 
   END FUNCTION E
 
@@ -141,13 +164,45 @@ CONTAINS
     dz = z / Nq
     
     DO i = 1 , Nq - 1
-       r = r + 1.0d0 / E( i * dz )
+       r = r + E( i * dz )
     END DO
 
     r = c / H0 * dz / 2.0d0 * ( E( 0.0d0 ) + 2.0d0 * r + E( z ) )
 
     RETURN
   END FUNCTION ComputeComovingDistance
+
+  ! --- Integrand in lookback time calculation ---
+  PURE FUNCTION E_LB( z )
+
+    REAL(DP) , INTENT(in) :: z
+    REAL(DP)              :: E_LB
+
+    E_LB = 1.0d0 / ( ( 1.0d0 + z ) &
+             * SQRT( OMEGA_M * ( 1.0d0 + z )**3 + OMEGA_L ) )
+
+  END FUNCTION E_LB
+
+  FUNCTION ComputeLookbackTime( z ) RESULT( tLB )
+
+    REAL(DP) , INTENT(in) :: z
+    REAL(DP)              :: dz
+    REAL(DP)              :: tLB
+
+    ! --- Integrate with Trapezoidal rule ---
+    tLB = 0.0d0
+    dz  = z / Nq
+    
+    DO i = 1 , Nq - 1
+      tLB = tLB + E_LB( i * dz )
+    END DO
+
+    tLB = 1.0d0 / H0 * dz / 2.0d0 * ( E_LB( 0.0d0 ) + 2.0d0 * tLB + E_LB( z ) )
+    
+    RETURN
+
+  END FUNCTION ComputeLookbackTime
+
   
   ! --- Characteristic strain (dimensionless) from Sesana et al. (2005), Eq. (6)
   SUBROUTINE Strain( M1 , M2 , f , hc )

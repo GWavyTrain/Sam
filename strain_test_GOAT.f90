@@ -32,6 +32,7 @@ PROGRAM GWstrainFromBHBmergers
 
   ! --- Get redshift ---
   z = 3.0d0
+  z = 0.09d0 ! Sesana
 
   ! --- Calculate comoving distance (in cm) ---
   r = ComputeComovingDistance( z )
@@ -39,6 +40,8 @@ PROGRAM GWstrainFromBHBmergers
   MergerID = 0
   M1       = 1.0d7
   M2       = 1.0d7
+  M1       = 26.0d0 ! Sesana
+  M2       = 29.0d0 ! Sesana
 
   ! --- Calculate the frequency at the ISCO ---
   Mtot   = ( M1 + M2 ) * Msun
@@ -47,9 +50,10 @@ PROGRAM GWstrainFromBHBmergers
              * SQRT( ( Mtot + mu ) / Mtot**3 )
 
   WRITE(*,*) 'f_ISCO:' , f_ISCO
+
+  WRITE( 101 , '(I17,1x,E10.4,1x,E10.4,1x,F13.10,1x,E16.10)' , &
+           ADVANCE = 'NO' ) MergerID , M1 , M2 , z , r / 3.086d24
   
-  WRITE( 101 , '(I17,1x,E7.1,1x,E7.1,1x,F13.10,1x,E16.10)' , ADVANCE = 'NO' ) &
-    MergerID , M1 , M2 , z , r / 3.086d24
   ! --- Loop through frequencies until f_ISCO ---
   j = 1
   DO WHILE ( ( LISA( j , 1 ) < f_ISCO ) .AND. ( j < Nf + 1 ) )
