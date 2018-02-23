@@ -3,17 +3,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-f_LISA , RootPSD_LISA = np.loadtxt( 'LISA_sensitivity.dat' , unpack = True )
+f_LISA , PSD_LISA = np.loadtxt( 'LISA_sensitivity.dat' , unpack = True )
+
+hn_LISA = np.sqrt( PSD_LISA * f_LISA )
 
 fig = plt.figure()
-plt.title( r'LISA Sensitivity Curve from http://www.srl.caltech.edu/\textasciitilde shane/sensitivity/MakeCurve.html' )
 
-plt.loglog( f_LISA , np.sqrt( f_LISA ) * RootPSD_LISA , 'k-' )
+plt.loglog( f_LISA , hn_LISA , 'k-' )
 
 plt.xlabel( r'$f\,\left[Hz\right]$'                )
 plt.ylabel( r'$h_{c}\,\left[dimensionless\right]$' )
 
 plt.xlim( 1.0e-5  , 2.0     )
-plt.ylim( 1.0e-21 , 1.0e-16 )
+plt.ylim( 5.0e-22 , 3.0e-17 )
 
-plt.show()
+plt.savefig( 'LISA_sensitivity.png' )
+#plt.show()
