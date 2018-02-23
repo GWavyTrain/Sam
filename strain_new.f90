@@ -2,7 +2,7 @@ PROGRAM GWstrainFromBHBmergers
 
   IMPLICIT NONE
 
-  INTEGER  , PARAMETER   :: DP = KIND( 1.d0 ) , Nq = 1000000 , N = 1000
+  INTEGER  , PARAMETER   :: DP = KIND( 1.d0 ) , Nq = 1000000 , Nz = 1000
   INTEGER  , PARAMETER   :: Nf = 400 , Nc = 7
   INTEGER  , PARAMETER   :: iID = 6 , iz = 3 , itLB = 10 , iM1 = 7 , iM2 = 8
   REAL(DP) , PARAMETER   :: PI = ACOS( -1.0d0 )
@@ -12,8 +12,8 @@ PROGRAM GWstrainFromBHBmergers
   REAL(DP) , ALLOCATABLE :: IllustrisData(:,:)
   REAL(DP)               :: r , LISA(Nf,2) , hc , z
   REAL(DP)               :: f_ISCO , M1 , M2 , Mtot , mu
-  REAL(DP)               :: z_arr(N) , tLB_z(N) , dz , z_max = 13.0d0 , tLB
-  INTEGER                :: nLinesIllustris , Nz , i , j
+  REAL(DP)               :: z_arr(Nz) , tLB_z(Nz) , dz , z_max = 13.0d0 , tLB
+  INTEGER                :: nLinesIllustris , Nss , i , j
   INTEGER*8              :: MergerID
   CHARACTER( len = 25 )  :: FILEIN
   CHARACTER( len = 11 )  :: FMTIN
@@ -30,24 +30,28 @@ PROGRAM GWstrainFromBHBmergers
   CLOSE( 100 )
 
   ! --- Create redshift array and compute lookback time ---
-  dz       = z_max / N
+  dz       = z_max / Nz
   z_arr(1) = 0.0d0
   tLB_z(1) = 0.0d0
-  DO i = 2 , N
+  DO i = 2 , Nz
     z_arr(i) = z_arr(i-1) + dz
     !!!!!! Why is this giving a segfault??!?!?!?!?!?!
     tLB_z(i) = ComputeLookbackTime( z_arr(i) )
   END DO
 
-  i = 2
-  tLB = ComputeLookbackTime( z_arr(i) )
-  WRITE(*,*) tLB / Gyr
-  tLB = ComputeLookbackTime( z_arr(3) )
-  WRITE(*,*) tLB / Gyr
-  tLB = ComputeLookbackTime( z_arr(4) )
-  WRITE(*,*) tLB / Gyr
-  tLB = ComputeLookbackTime( z_arr(5) )
-  WRITE(*,*) tLB / Gyr
+!!$  DO i = 2 , Nz
+!!$     tLB_z(i) = ComputeLookbackTime( z_arr(i) )
+!!$  END DO
+
+!!$  i = 2
+!!$  tLB = ComputeLookbackTime( z_arr(i) )
+!!$  WRITE(*,*) tLB / Gyr
+!!$  tLB = ComputeLookbackTime( z_arr(3) )
+!!$  WRITE(*,*) tLB / Gyr
+!!$  tLB = ComputeLookbackTime( z_arr(4) )
+!!$  WRITE(*,*) tLB / Gyr
+!!$  tLB = ComputeLookbackTime( z_arr(Nz) )
+!!$  WRITE(*,*) tLB / Gyr
 
   STOP
   
@@ -58,21 +62,21 @@ PROGRAM GWstrainFromBHBmergers
     0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , LISA( : , 1 )
 
   ! --- Loop through Illustris snapshots ---
-  DO Nz = 26 , 27!135
+  DO Nss = 26 , 27!135
 
-    IF ( ( Nz .NE. 53 ) .AND. ( Nz .NE. 55 ) ) THEN
-      OPEN ( 102 , FILE = 'Nz.dat' )
-      WRITE( 102 , '(I3)' ) Nz
-      CLOSE( 102 )
+    IF ( ( Nss .NE. 53 ) .AND. ( Nss .NE. 55 ) ) THEN
+      !OPEN ( 102 , FILE = 'Nss.dat' )
+      !WRITE( 102 , '(I3)' ) Nss
+      !CLOSE( 102 )
 
       ! --- Get filenames
-      IF ( Nz < 100 ) THEN
+      IF ( Nss < 100 ) THEN
         FMTIN = '(A18,I2,A4)'
       ELSE
         FMTIN = '(A18,I3,A4)'
       END IF
 
-      WRITE( FILEIN  , FMTIN  ) 'time_BHillustris1_' , Nz , '.dat'
+      WRITE( FILEIN  , FMTIN  ) 'time_BHillustris1_' , Nss , '.dat'
 
       ! --- Get number of lines (mergers) in Illustris data file ---
       nLinesIllustris = 0
