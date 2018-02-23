@@ -25,7 +25,7 @@ PROGRAM GWstrainFromBHBmergers
   END DO
   CLOSE( 100 )
 
-  OPEN ( 101 , FILE = 'GW_strain_test_GOAT.dat' )
+  OPEN ( 101 , FILE = 'GW_strain_test.dat' )
   WRITE( 101 , '(A22)' ) '# ID, M1, M2, z, r, hc(f)'
   FMT = '(I17,1x,E7.1,1x,E7.1,1x,F13.10,1x,E16.10,900E13.6)'
   WRITE( 101 , FMT ) 0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0, LISA( : , 1 )
