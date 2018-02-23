@@ -38,9 +38,9 @@ PROGRAM GWstrainFromBHBmergers
   DO Nz = 26 , 27!135
 
     IF ( ( Nz .NE. 53 ) .AND. ( Nz .NE. 55 ) ) THEN
-      OPEN ( 102 , FILE = 'Nz.dat' )
-      WRITE( 102 , '(I3)' ) Nz
-      CLOSE( 102 )
+      !OPEN ( 102 , FILE = 'Nz.dat' )
+      !WRITE( 102 , '(I3)' ) Nz
+      !CLOSE( 102 )
 
       ! --- Get filenames
       IF ( Nz < 100 ) THEN

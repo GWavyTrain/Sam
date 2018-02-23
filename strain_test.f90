@@ -3,7 +3,7 @@ PROGRAM GWstrainFromBHBmergers
   IMPLICIT NONE
 
   INTEGER  , PARAMETER   :: DP = KIND( 1.d0 ) , Nq = 1000000
-  INTEGER  , PARAMETER   :: Nf = 900 , Nc = 22
+  INTEGER  , PARAMETER   :: Nf = 400 , Nc = 7
   REAL(DP) , PARAMETER   :: PI = ACOS( -1.0d0 )
   REAL(DP) , PARAMETER   :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
   REAL(DP) , PARAMETER   :: c = 3.0d10 , G = 6.67d-8 , H0 = 70.4d0 / 3.086d19
@@ -12,7 +12,6 @@ PROGRAM GWstrainFromBHBmergers
   REAL(DP)               :: f_ISCO , M1 , M2 , Mtot , mu
   INTEGER                :: i , j
   INTEGER*8              :: MergerID
-  CHARACTER( len = 50 )  :: FMT
 
   ! --- Read in frequencies from LISA sensitivity curve ---
   OPEN( 100 , FILE = 'LISA_sensitivity.dat' )
@@ -27,8 +26,8 @@ PROGRAM GWstrainFromBHBmergers
 
   OPEN ( 101 , FILE = 'GW_strain_test.dat' )
   WRITE( 101 , '(A22)' ) '# ID, M1, M2, z, r, hc(f)'
-  FMT = '(I17,1x,E7.1,1x,E7.1,1x,F13.10,1x,E16.10,900E13.6)'
-  WRITE( 101 , FMT ) 0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0, LISA( : , 1 )
+  WRITE( 101 , '(I6,1x,E10.4,1x,E10.4,1x,F13.10,1x,E16.10,900E13.6)' ) &
+           0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0, LISA( : , 1 )
 
   ! --- Get redshift ---
   z = 3.0d0
@@ -51,7 +50,7 @@ PROGRAM GWstrainFromBHBmergers
 
   WRITE(*,*) 'f_ISCO:' , f_ISCO
 
-  WRITE( 101 , '(I17,1x,E10.4,1x,E10.4,1x,F13.10,1x,E16.10)' , &
+  WRITE( 101 , '(I6,1x,E10.4,1x,E10.4,1x,F13.10,1x,E16.10)' , &
            ADVANCE = 'NO' ) MergerID , M1 , M2 , z , r / 3.086d24
   
   ! --- Loop through frequencies until f_ISCO ---
