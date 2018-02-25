@@ -13,7 +13,7 @@ PROGRAM GWstrainFromBHBmergers
   REAL(DP)               :: r , LISA(Nf,2) , hc , z
   REAL(DP)               :: f_ISCO , M1 , M2 , Mtot , mu
   INTEGER                :: nLinesIllustris , Nz , i , j
-  INTEGER*8              :: MergerID
+  INTEGER*4              :: MergerID
   CHARACTER( len = 25 )  :: FILEIN
   CHARACTER( len = 11 )  :: FMTIN
 

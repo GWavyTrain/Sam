@@ -11,7 +11,7 @@ PROGRAM GWstrainFromBHBmergers
   REAL(DP)               :: r , LISA(Nf,2) , hc , z
   REAL(DP)               :: f_ISCO , M1 , M2 , Mtot , mu
   INTEGER                :: i , j
-  INTEGER*8              :: MergerID
+  INTEGER*4              :: MergerID
 
   ! --- Read in frequencies from LISA sensitivity curve ---
   OPEN( 100 , FILE = 'LISA_sensitivity.dat' )
