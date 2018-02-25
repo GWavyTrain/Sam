@@ -13,7 +13,7 @@ PROGRAM GWstrainFromBHBmergers
   REAL(DP) , PARAMETER   :: Msun = 2.0d33 , Gyr = 1.0d9 * 86400.0d0 * 365.25d0
   REAL(DP) , ALLOCATABLE :: IllustrisData(:,:)
   REAL(DP)               :: LISA(Nf,2) , hc , z , tLB , r
-  REAL(DP)               :: M1 , M2 , Mtot , mu , f_ISCO
+  REAL(DP)               :: M1 , M2 , f_ISCO
   REAL(DP)               :: z_arr(Nz) , tLB_z_arr(Nz)
   INTEGER                :: nLinesIllustris , Nss , i , j , k
   INTEGER*4              :: MergerID
@@ -94,12 +94,9 @@ PROGRAM GWstrainFromBHBmergers
         WRITE( 100 , '(I7,1x,F7.4,1x,F7.4,1x,F13.10,1x,F13.10,1x,E16.10)' , &
                  ADVANCE = 'NO' ) MergerID , M1 , M2 , tLB , z , r / 3.086d24
         
-        ! --- Calculate frequency at ISCO using two-body decomposition
-        !       (total mass Mtot and reduced mass mu) ---
-        Mtot   = ( M1 + M2 ) * Msun
-        mu     = M1 * M2 / ( M1 + M2 ) * Msun
-        f_ISCO = c**3 / ( 6.0d0**( 3.0d0 / 2.0d0 ) * PI * G * ( 1.0d0 + z ) ) &
-                   * SQRT( ( Mtot + mu ) / Mtot**3 )
+        ! --- Calculate frequency at ISCO using Sesana et al., (2005) ---
+        f_ISCO = c**3 / ( 6.0d0**( 3.0d0 / 2.0d0 ) * PI * G &
+                   * ( M1 + M2 ) * Msun  * ( 1.0d0 + z ) )
 
         ! --- Loop through frequencies until f_ISCO ---
         j = 1
