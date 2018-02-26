@@ -15,8 +15,8 @@ z = data[ 1 , 3 ]
 r = data[ 1 , 4 ]
 
 # Get frequencies and strain
-f  = data[ 0 , 5 : ]
-hc = data[ 1 , 5 : ]
+f  = data[ 0 , 6 : ]
+hc = data[ 1 , 6 : ]
 
 # Get masses
 M1 = data[ 1 , 1 ]
@@ -25,7 +25,7 @@ M2 = data[ 1 , 2 ]
 # Plotting
 fig = plt.figure()
 
-plt.loglog( f_LISA , hn_LISA , 'k-'                  )
+plt.loglog( f_LISA , hn_LISA , 'k-'                    )
 plt.loglog( f      , hc      , 'b-' , label = 'Sesana' )
 
 plt.text( f_LISA[ 150 ] , hn_LISA[ 350 ] , \

@@ -4,7 +4,7 @@ PROGRAM GWstrainFromBHBmergers
 
   INTEGER  , PARAMETER   :: DP = KIND( 1.d0 )
   INTEGER  , PARAMETER   :: Nq = 1000000 , Nz = 100 , Nf = 400 , Nc = 7
-  INTEGER  , PARAMETER   :: iID = 6 , iM1 = 7 , iM2 = 8 , itLB = 10 , iz = 3
+  INTEGER  , PARAMETER   :: iID = 6 , iM1 = 7 , iM2 = 8 , itLB = 10
   REAL(DP) , PARAMETER   :: PI = ACOS( -1.0d0 )
   REAL(DP) , PARAMETER   :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
   REAL(DP) , PARAMETER   :: H0 = 70.4d0 / 3.086d19
@@ -32,14 +32,14 @@ PROGRAM GWstrainFromBHBmergers
   CLOSE( 100 )
 
   ! --- Compute array of lookback times ---
-  OPEN( 100 , FILE = 'tLB_z.dat' )
-  WRITE( 100 , '(A9)' ) '# z , tLB'
+!  OPEN( 100 , FILE = 'tLB_z.dat' )
+!  WRITE( 100 , '(A9)' ) '# z , tLB'
   DO i = 1 , Nz
     z_arr(i)     = (i-1) * dz
     tLB_z_arr(i) = ComputeLookbackTime( z_arr(i) ) / Gyr
-    WRITE( 100 , '(F13.10,1x,E13.6)' ) z_arr(i) , tLB_z_arr(i)
+!    WRITE( 100 , '(F13.10,1x,E13.6)' ) z_arr(i) , tLB_z_arr(i)
   END DO
-  CLOSE( 100 )
+!  CLOSE( 100 )
 
   ! --- Create file for storing strains (first row will hold frequencies) ---
   OPEN ( 100 , FILE = 'hc.dat' )
@@ -135,8 +135,10 @@ CONTAINS
 
     E = 1.0d0 / SQRT( OMEGA_M * ( 1.0d0 + z )**3 + OMEGA_L )
 
+    RETURN
   END FUNCTION E
 
+  
   FUNCTION ComputeComovingDistance( z ) RESULT( r )
 
     REAL(DP) , INTENT(in) :: z
@@ -155,6 +157,7 @@ CONTAINS
     RETURN
   END FUNCTION ComputeComovingDistance
 
+  
   ! --- Integrand in lookback time calculation ---
   PURE FUNCTION E_LB( z )
 
@@ -165,9 +168,9 @@ CONTAINS
              * SQRT( OMEGA_M * ( 1.0d0 + z )**3 + OMEGA_L ) )
     
     RETURN
-
   END FUNCTION E_LB
 
+  
   FUNCTION ComputeLookbackTime( z ) RESULT( tLB )
 
     REAL(DP) , INTENT(in) :: z
@@ -186,9 +189,9 @@ CONTAINS
     tLB = 1.0d0 / H0 * dz / 2.0d0 * ( E_LB( 0.0d0 ) + 2.0d0 * tLB + E_LB( z ) )
     
     RETURN
-
   END FUNCTION ComputeLookbackTime
 
+  
   ! --- Characteristic strain (dimensionless)
   !       from Sesana et al. (2005), Eq. (6) ---
   PURE FUNCTION Strain( M1 , M2 , f ) RESULT( hc )
@@ -206,6 +209,7 @@ CONTAINS
     RETURN
   END FUNCTION Strain
 
+  
   ! --- Interpolate lookback time array to get redshift ---
   FUNCTION InterpolateLookbackTime( tLB ) RESULT( z )
 
@@ -213,21 +217,24 @@ CONTAINS
     REAL(DP)              :: zmin , zmax , tLBmin , tLBmax , tLBi , m , b
     REAL(DP)              :: z
 
-    ! --- Small lookback time approximation ---
+    ! --- Small lookback time approximation: tLB ~ tH * z ---
     IF ( tLB < 0.5d0 ) THEN
       z = tLB * ( H0 * Gyr )
       RETURN
     END IF
 
     tLBi = tLB_z_arr(1)
-    IF ( tLB <= tLB_z_arr(Nz) ) THEN
+    IF ( tLB < tLB_z_arr(Nz) ) THEN
+
+       ! --- Interpolate using linear interpolation ---
+
+       ! --- Get redshift bounds ---
        k = 1
        DO WHILE ( tLBi <= tLB )
           k = k + 1
           tLBi = tLB_z_arr(k)
        END DO
 
-       ! --- Interpolate using linear interpolation ---
        zmin   = z_arr(k)
        zmax   = z_arr(k+1)
        tLBmin = tLB_z_arr(k)
@@ -237,15 +244,25 @@ CONTAINS
        m = ( tLBmax - tLBmin ) / ( zmax - zmin )
        b = 0.5_DP * ( ( tLBmax - m * zmax ) + ( tLBmin - m * zmin ) )
 
-       z = ( tLB - b ) / m
     ELSE
-       ! --- Extrapolate ---
-       z = z_max
+
+       ! --- Extrapolate using linear extrapolation ---
+
+       zmin   = z_arr(Nz-1)
+       zmax   = z_arr(Nz)
+       tLBmin = tLB_z_arr(Nz-1)
+       tLBmax = tLB_z_arr(Nz)
+
+       ! --- tLB = m * z + b ---
+       m = ( tLBmax - tLBmin ) / ( zmax - zmin )
+       b = 0.5_DP * ( ( tLBmax - m * zmax ) + ( tLBmin - m * zmin ) )
 
     END IF
 
-    RETURN
+    z = ( tLB - b ) / m
 
+    RETURN
   END FUNCTION InterpolateLookbackTime
-  
+
+
 END PROGRAM GWstrainFromBHBmergers

@@ -15,8 +15,8 @@ z = data[ -1 , 3 ]
 r = data[ -1 , 4 ]
 
 # Get frequencies and strain
-f  = data[ 0  , 5 : ]
-hc = data[ -1 , 5 : ]
+f  = data[ 0  , 6 : ]
+hc = data[ -1 , 6 : ]
 
 # Get masses
 M1 = data[ -1 , 1 ]
