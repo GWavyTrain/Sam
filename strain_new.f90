@@ -3,12 +3,12 @@ PROGRAM GWstrainFromBHBmergers
   IMPLICIT NONE
 
   INTEGER  , PARAMETER   :: DP = KIND( 1.d0 )
-  INTEGER  , PARAMETER   :: Nq = 1000000 , Nz = 100 , Nf = 400 , Nc = 7
+  INTEGER  , PARAMETER   :: Nq = 10000 , Nz = 100000 , Nf = 400 , Nc = 7
   INTEGER  , PARAMETER   :: iID = 6 , iM1 = 7 , iM2 = 8 , itLB = 10
   REAL(DP) , PARAMETER   :: PI = ACOS( -1.0d0 )
   REAL(DP) , PARAMETER   :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
   REAL(DP) , PARAMETER   :: H0 = 70.4d0 / 3.086d19
-  REAL(DP) , PARAMETER   :: z_max = 10.0d0 , dz = z_max / ( Nz - 1 )
+  REAL(DP) , PARAMETER   :: z_max = 20.0d0 , dz = z_max / ( Nz - 1 )
   REAL(DP) , PARAMETER   :: c = 3.0d10 , G = 6.67d-8
   REAL(DP) , PARAMETER   :: Msun = 2.0d33 , Gyr = 1.0d9 * 86400.0d0 * 365.25d0
   REAL(DP) , ALLOCATABLE :: IllustrisData(:,:)
@@ -26,20 +26,27 @@ PROGRAM GWstrainFromBHBmergers
   DO i = 1 , Nc
     READ( 100 , * )
   END DO
+  ! --- Read in data
   DO i = 1 , Nf
     READ( 100 , * ) LISA( i , : )
   END DO
   CLOSE( 100 )
 
+  ! --- Create or read in lookback time array ---
+  OPEN( 100 , FILE = 'tLB_z.dat' )
+  
   ! --- Compute array of lookback times ---
-!  OPEN( 100 , FILE = 'tLB_z.dat' )
-!  WRITE( 100 , '(A9)' ) '# z , tLB'
+  WRITE(*,'(A34)') 'Computing array of lookback times:'
+  WRITE( 100 , '(A9)' ) '# z , tLB'
   DO i = 1 , Nz
-    z_arr(i)     = (i-1) * dz
-    tLB_z_arr(i) = ComputeLookbackTime( z_arr(i) ) / Gyr
-!    WRITE( 100 , '(F13.10,1x,E13.6)' ) z_arr(i) , tLB_z_arr(i)
+    IF ( MOD( i , Nz / 100 ) .EQ. 0 ) &
+      WRITE(*,'(A7,I6,A1,I6)' )   'i/Nz = ' , i , '/' , Nz
+      z_arr(i)     = (i-1) * dz
+      tLB_z_arr(i) = ComputeLookbackTime( z_arr(i) ) / Gyr
+      WRITE( 100 , '(F13.10,1x,F13.10)' ) z_arr(i) , tLB_z_arr(i)
   END DO
-!  CLOSE( 100 )
+
+  CLOSE( 100 )
 
   ! --- Create file for storing strains (first row will hold frequencies) ---
   OPEN ( 100 , FILE = 'hc.dat' )
@@ -174,10 +181,14 @@ CONTAINS
   FUNCTION ComputeLookbackTime( z ) RESULT( tLB )
 
     REAL(DP) , INTENT(in) :: z
-    REAL(DP)              :: dz
+    REAL(DP)              :: dz , Error
     REAL(DP)              :: tLB
-
+    
     ! --- Integrate with Trapezoidal rule ---
+    ! --- |ERROR|: Nq = 1000   --> 1.47d-3
+    !              Nq = 10000  --> 1.47d-5
+    !              Nq = 100000 --> 1.47d-7 ---
+    
     tLB = 0.0d0
     dz  = z / Nq
 

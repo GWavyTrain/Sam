@@ -33,5 +33,5 @@ plt.ylabel( \
 r'$\ell og_{10}\left[\frac{\left|t_{LB}-t_H\times z\right|}{t_{LB}}\right]$' , \
 labelpad = -5 )
 
-plt.savefig( 'CheckSmallRedshiftApproximation.png' )
-#plt.show()
+#plt.savefig( 'CheckSmallRedshiftApproximation.png' )
+plt.show()
