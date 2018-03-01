@@ -8,7 +8,7 @@ PROGRAM GWstrainFromBHBmergers
   REAL(DP) , PARAMETER   :: PI = ACOS( -1.0d0 )
   REAL(DP) , PARAMETER   :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
   REAL(DP) , PARAMETER   :: H0 = 70.4d0 / 3.086d19
-  REAL(DP) , PARAMETER   :: z_max = 20.0d0 , dz = z_max / ( Nz - 1 )
+  REAL(DP) , PARAMETER   :: z_max = 1000.0d0 , dz = z_max / ( Nz - 1 )
   REAL(DP) , PARAMETER   :: c = 3.0d10 , G = 6.67d-8
   REAL(DP) , PARAMETER   :: Msun = 2.0d33 , Gyr = 1.0d9 * 86400.0d0 * 365.25d0
   REAL(DP) , ALLOCATABLE :: IllustrisData(:,:)
@@ -43,7 +43,7 @@ PROGRAM GWstrainFromBHBmergers
       WRITE(*,'(A7,I6,A1,I6)' )   'i/Nz = ' , i , '/' , Nz
       z_arr(i)     = (i-1) * dz
       tLB_z_arr(i) = ComputeLookbackTime( z_arr(i) ) / Gyr
-      WRITE( 100 , '(F13.10,1x,F13.10)' ) z_arr(i) , tLB_z_arr(i)
+      WRITE( 100 , '(E16.10,1x,F13.10)' ) z_arr(i) , tLB_z_arr(i)
   END DO
 
   CLOSE( 100 )
@@ -51,7 +51,7 @@ PROGRAM GWstrainFromBHBmergers
   ! --- Create file for storing strains (first row will hold frequencies) ---
   OPEN ( 100 , FILE = 'hc.dat' )
   WRITE( 100 , '(A31)' ) '# ID, M1, M2, tLB , z, r, hc(f)'
-  WRITE( 100 , '(I7,1x,F7.4,1x,F7.4,1x,F13.10,1x,F13.10,1x,E16.10,400E13.6)' ) &
+  WRITE( 100 , '(I7,1x,F7.4,1x,F7.4,1x,F13.10,1x,E16.10,1x,E16.10,400E13.6)' ) &
     0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , LISA( : , 1 )
 
   ! --- Loop through Illustris snapshots ---
@@ -98,7 +98,7 @@ PROGRAM GWstrainFromBHBmergers
         ! --- Compute comoving distance (in cm) ---
         r = ComputeComovingDistance( z )
 
-        WRITE( 100 , '(I7,1x,F7.4,1x,F7.4,1x,F13.10,1x,F13.10,1x,E16.10)' , &
+        WRITE( 100 , '(I7,1x,F7.4,1x,F7.4,1x,F13.10,1x,E16.10,1x,E16.10)' , &
                  ADVANCE = 'NO' ) MergerID , M1 , M2 , tLB , z , r / 3.086d24
         
         ! --- Calculate frequency at ISCO using Sesana et al., (2005) ---
@@ -225,7 +225,7 @@ CONTAINS
   FUNCTION InterpolateLookbackTime( tLB ) RESULT( z )
 
     REAL(DP) , INTENT(in) :: tLB
-    REAL(DP)              :: zmin , zmax , tLBmin , tLBmax , tLBi , m , b
+    REAL(DP)              :: zmin , zmax , tLBmin , tLBmax , tLBk , m , b
     REAL(DP)              :: z
 
     ! --- Small lookback time approximation: tLB ~ tH * z ---
@@ -234,22 +234,22 @@ CONTAINS
       RETURN
     END IF
 
-    tLBi = tLB_z_arr(1)
     IF ( tLB < tLB_z_arr(Nz) ) THEN
 
        ! --- Interpolate using linear interpolation ---
 
        ! --- Get redshift bounds ---
        k = 1
-       DO WHILE ( tLBi <= tLB )
+       tLBk = tLB_z_arr(k)
+       DO WHILE ( tLBk < tLB )
           k = k + 1
-          tLBi = tLB_z_arr(k)
+          tLBk = tLB_z_arr(k)
        END DO
 
-       zmin   = z_arr(k)
-       zmax   = z_arr(k+1)
-       tLBmin = tLB_z_arr(k)
-       tLBmax = tLB_z_arr(k+1)
+       zmin   = z_arr(k-1)
+       zmax   = z_arr(k)
+       tLBmin = tLB_z_arr(k-1)
+       tLBmax = tLB_z_arr(k)
 
        ! --- tLB = m * z + b ---
        m = ( tLBmax - tLBmin ) / ( zmax - zmin )

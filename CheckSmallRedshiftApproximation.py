@@ -4,9 +4,13 @@ np.seterr( divide = 'ignore' , invalid = 'ignore' )
 
 z , tLB = np.loadtxt( 'tLB_z.dat' , unpack = True )
 
+z_cut = 0.1
+z    = z[   np.where( z < z_cut )[0] ]
+tLB  = tLB[ np.where( z < z_cut )[0] ]
+
 H0 = 70.0 / 3.086e19 * 86400.0 * 365.25 * 1.0e9 # [ 1 / Gyr ]
 
-xlim = ( 0.0 , 0.1 )
+xlim = ( 0.0 , z_cut )
 
 plt.suptitle( 'Checking small redshift approximation to lookback time' )
 
@@ -23,15 +27,13 @@ plt.xlim( xlim )
 plt.ylim( 0.0 , 1.0 )
 
 plt.subplot( 212 )
-plt.plot( z , np.log10( ( np.abs( tLB - ( 1.0 / H0 * z ) ) ) / tLB ) , 'k-')
+plt.plot( z , np.abs( tLB - ( 1.0 / H0 * z ) ) / tLB , 'k-')
 plt.axvline( z[ np.where( tLB < 0.5 )[0][-1] ] , c = 'r' , \
                label = r'$z\left(t_{LB}=0.5\right)$' )
 plt.legend()
 plt.xlim( xlim )
 plt.xlabel( r'$z$' )
-plt.ylabel( \
-r'$\ell og_{10}\left[\frac{\left|t_{LB}-t_H\times z\right|}{t_{LB}}\right]$' , \
-labelpad = -5 )
+plt.ylabel( r'$\frac{\left|t_{LB}-t_H\times z\right|}{t_{LB}}$' )
 
 #plt.savefig( 'CheckSmallRedshiftApproximation.png' )
 plt.show()
