@@ -9,8 +9,8 @@ H0 = 70.0 / 3.086e19 * 86400.0 * 365.25 * 1.0e9 # [ 1 / Gyr ]
 z_20   = z  [ np.where( z < 20.0 )[0] ]
 tLB_20 = tLB[ np.where( z < 20.0 )[0] ]
 
-z_20_1000   = z  [ np.where( z > 20.0 )[0] ]
-tLB_20_1000 = tLB[ np.where( z > 20.0 )[0] ]
+z_20_100   = z  [ np.where( z > 20.0 )[0] ]
+tLB_20_100 = tLB[ np.where( z > 20.0 )[0] ]
 
 imin   = 2
 imax   = 1
@@ -24,11 +24,11 @@ zExMax = z[-1]
 m = ( tLBmax - tLBmin ) / ( zmax - zmin )
 b = 0.5 * ( ( tLBmax - m * zmax ) + ( tLBmin - m * zmin ) )
 
-zEx = np.linspace( zmax , zExMax , len( z_20_1000 ) )
+zEx = np.linspace( zmax , zExMax , len( z_20_100 ) )
 
 tLBEx = m * zEx  + b
 
-xlim = ( 0.0 , z[-1] )
+xlim = ( z_20[-1] , z[-1] )
 
 plt.suptitle( 'Checking accuracy of extrapolation' )
 
@@ -43,8 +43,9 @@ plt.xlim( xlim )
 plt.legend()
 
 plt.subplot( 212 )
-plt.plot( zEx , ( np.abs( tLB_20_1000 - tLBEx ) / tLB_20_1000 ) , 'k-' )
+plt.plot( zEx , ( np.abs( tLB_20_100 - tLBEx ) / tLB_20_100 ) , 'k-' )
 plt.xlabel( r'$z$' , labelpad = -7 )
 plt.ylabel( r'$\frac{\left|t_{LB}-t_{LB,Ex}\right|}{t_{LB}}$' )
-#plt.savefig( 'CheckExtrapolation.png' )
-plt.show()
+plt.xlim( xlim )
+plt.savefig( 'CheckExtrapolation.png' )
+#plt.show()
