@@ -10,7 +10,7 @@ data              = np.loadtxt( 'hc.dat' )
 # Compute noise amplitude for LISA
 hn_LISA = np.sqrt( PSD_LISA * f_LISA )
 
-Merger = -3
+Merger = 3
 
 # Get redshift z and comoving distance r
 z = data[ Merger , 4 ]
@@ -43,6 +43,6 @@ plt.ylabel( r'$\ell og_{10}\ h_{c}\,\left[dimensionless\right]$' )
 plt.xlim( 1.0e-5  , 2.0     )
 #plt.ylim( 5.0e-22 , 3.0e-17 )
 
-plt.savefig( 'CompareStrainToLISA.png' )
-#plt.show()
+#plt.savefig( 'CompareStrainToLISA.png' )
+plt.show()
 

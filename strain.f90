@@ -3,7 +3,8 @@ PROGRAM GWstrainFromBHBmergers
   IMPLICIT NONE
 
   INTEGER  , PARAMETER   :: DP = KIND( 1.d0 )
-  INTEGER  , PARAMETER   :: Nq = 10000 , Nz = 100000 , Nf = 400 , Nc = 7
+  INTEGER  , PARAMETER   :: Nq = 10000 , Nz = 100000
+  INTEGER  , PARAMETER   :: Nc = 7 , Nf_all = 400 , Nf = 10 , DELTA = Nf_all / Nf
   INTEGER  , PARAMETER   :: iID = 6 , iM1 = 7 , iM2 = 8 , itLB = 10
   REAL(DP) , PARAMETER   :: PI = ACOS( -1.0d0 )
   REAL(DP) , PARAMETER   :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
@@ -13,7 +14,7 @@ PROGRAM GWstrainFromBHBmergers
   REAL(DP) , PARAMETER   :: tau = 4.0d0 * 86400.0d0 * 365.35d0
   REAL(DP) , PARAMETER   :: Msun = 2.0d33 , Gyr = 1.0d9 * 86400.0d0 * 365.25d0
   REAL(DP) , ALLOCATABLE :: IllustrisData(:,:)
-  REAL(DP)               :: LISA(Nf,2) , hc , z , tLB , r
+  REAL(DP)               :: LISA_all(Nf_all,2) , LISA(Nf,2) , hc , z , tLB , r
   REAL(DP)               :: M1 , M2 , f_ISCO
   REAL(DP)               :: z_arr(Nz) , tLB_z_arr(Nz)
   INTEGER                :: nLinesIllustris , Nss , i , j , k
@@ -27,19 +28,25 @@ PROGRAM GWstrainFromBHBmergers
   DO i = 1 , Nc
     READ( 100 , * )
   END DO
-  ! --- Read in data
-  DO i = 1 , Nf
-    READ( 100 , * ) LISA( i , : )
+  ! --- Read in data ---
+  DO i = 1 , Nf_all
+    READ( 100 , * ) LISA_all( i , : )
   END DO
   CLOSE( 100 )
 
+  ! --- Trim LISA data ---
+  LISA( 1 , : ) = LISA_all( 1 , : )
+  DO i = 2 , Nf
+     LISA( i , : ) = LISA_all( i * DELTA , : )
+  END DO
+  
   ! --- Create or read in lookback time array ---
   OPEN( 100 , FILE = 'tLB_z.dat' )
   
   ! --- Compute array of lookback times ---
   WRITE( 100 , '(A8)' ) '# z, tLB'
   DO i = 1 , Nz
-    z_arr(i)     = (i-1) * dz
+    z_arr(i)     = ( i - 1 ) * dz
     tLB_z_arr(i) = ComputeLookbackTime( z_arr(i) ) / Gyr
     WRITE( 100 , '(E16.10,1x,F13.10)' ) z_arr(i) , tLB_z_arr(i)
   END DO
