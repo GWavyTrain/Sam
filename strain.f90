@@ -44,11 +44,11 @@ PROGRAM GWstrainFromBHBmergers
   OPEN( 100 , FILE = 'tLB_z.dat' )
   
   ! --- Compute array of lookback times ---
-  WRITE( 100 , '(A8)' ) '# z, tLB'
+  WRITE( 100 , '(A14)' ) '# z, tLB [Gyr]'
   DO i = 1 , Nz
     z_arr(i)     = ( i - 1 ) * dz
     tLB_z_arr(i) = ComputeLookbackTime( z_arr(i) ) / Gyr
-    WRITE( 100 , '(E16.10,1x,F13.10)' ) z_arr(i) , tLB_z_arr(i)
+    WRITE( 100 , '(ES16.10,1x,F13.10)' ) z_arr(i) , tLB_z_arr(i)
   END DO
 
   CLOSE( 100 )
@@ -57,17 +57,17 @@ PROGRAM GWstrainFromBHBmergers
   OPEN ( 100 , FILE = 'hc.dat' )
   WRITE( 100 , '(A59)' ) &
          '# ID, M1, M2, tLB [Gyr], z, f_ISCO, r_comoving [Mpc], hc(f)'
-  WRITE( 100 , &
-    '(I7,1x,F7.4,1x,F7.4,1x,F13.10,1x,E16.10,1x,E16.10,1x,E16.10,400E13.6)' ) &
-      0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , LISA( : , 1 )
+  WRITE( 100 , '(I7,1x,F7.4,1x,F7.4,1x,F13.10,1x,ES16.10,1x, &
+                   ES16.10,1x,ES16.10,400ES13.6)' ) &
+           0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , LISA( : , 1 )
 
   ! --- Loop through Illustris snapshots ---
-  DO Nss = 26 , 135
+  DO Nss = 26 , 27!135
 
     IF ( ( Nss .NE. 53 ) .AND. ( Nss .NE. 55 ) ) THEN
-      OPEN ( 102 , FILE = 'Nss.dat' )
-      WRITE( 102 , '(I3)' ) Nss
-      CLOSE( 102 )
+      !OPEN ( 102 , FILE = 'Nss.dat' )
+      !WRITE( 102 , '(I3)' ) Nss
+      !CLOSE( 102 )
 
       ! --- Get filenames
       IF ( Nss < 100 ) THEN
@@ -110,22 +110,21 @@ PROGRAM GWstrainFromBHBmergers
         f_ISCO = c**3 / ( 6.0d0**( 3.0d0 / 2.0d0 ) * PI * G &
                    * ( M1 + M2 ) * Msun  * ( 1.0d0 + z ) )
 
-        WRITE( 100 , &
-              '(I7,1x,F7.4,1x,F7.4,1x,F13.10,1x,E16.10,1x,E16.10,1x,E16.10)' , &
-                ADVANCE = 'NO' ) &
-                  MergerID , M1 , M2 , tLB , z , f_ISCO , r / 3.086d24
+        WRITE( 100 , '(I7,1x,F7.4,1x,F7.4,1x,F13.10,1x,ES16.10,1x, &
+                         ES16.10,1x,ES16.10)' , ADVANCE = 'NO' ) &
+                 MergerID , M1 , M2 , tLB , z , f_ISCO , r / 3.086d24
         
         ! --- Loop through frequencies until f_ISCO ---
         j = 1
         DO WHILE ( ( LISA( j , 1 ) < f_ISCO ) .AND. ( j < Nf + 1 ) )
           hc = Strain( M1 , M2 , LISA( j , 1 ) , z , r )
-          WRITE( 100 , '(E13.6)' , ADVANCE = 'NO' ) hc
+          WRITE( 100 , '(ES13.6)' , ADVANCE = 'NO' ) hc
           j = j + 1
         END DO
 
         ! --- Fill in missing frequencies with 0.0d0 ---
         DO WHILE ( j < Nf + 1 )
-          WRITE( 100 , '(E13.6)' , ADVANCE = 'NO' ) 0.0d0
+          WRITE( 100 , '(ES13.6)' , ADVANCE = 'NO' ) 0.0d0
           j = j + 1
         END DO
 
