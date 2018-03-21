@@ -10,7 +10,7 @@ data              = np.loadtxt( 'hc.dat' )
 # Compute noise amplitude for LISA
 hn_LISA = np.sqrt( PSD_LISA * f_LISA )
 
-Merger = 3
+Merger = -3
 
 # Get redshift z and comoving distance r
 z = data[ Merger , 4 ]
