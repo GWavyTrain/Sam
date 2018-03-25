@@ -17,13 +17,14 @@ PROGRAM GWstrainFromBHBmergers
   REAL(DP)               :: LISA_all(Nf_all,2) , LISA(Nf,2) , hc , z , tLB , r
   REAL(DP)               :: M1 , M2 , f_ISCO
   REAL(DP)               :: z_arr(Nz) , tLB_z_arr(Nz)
-  INTEGER                :: nLinesIllustris , Nss , i , j , k
+  INTEGER                :: nLinesIllustris , Nss , i , j , k , SS(2)
   INTEGER*4              :: MergerID
-  CHARACTER( len = 25 )  :: FILEIN
+  CHARACTER( len = 28 )  :: FILEIN
   CHARACTER( len = 11 )  :: FMTIN
+  CHARACTER( len = 3  )  :: arg
 
   ! --- Read in frequencies from LISA sensitivity curve data file ---
-  OPEN( 100 , FILE = 'LISA_sensitivity.dat' )
+  OPEN( 100 , FILE = '../LISA_sensitivity.dat' )
   ! --- Loop through comments ---
   DO i = 1 , Nc
     READ( 100 , * )
@@ -40,7 +41,7 @@ PROGRAM GWstrainFromBHBmergers
      LISA( i , : ) = LISA_all( i * DELTA , : )
   END DO
   
-  ! --- Create or read in lookback time array ---
+  ! --- Create lookback time array ---
   OPEN( 100 , FILE = 'tLB_z.dat' )
   
   ! --- Compute array of lookback times ---
@@ -61,22 +62,33 @@ PROGRAM GWstrainFromBHBmergers
                    ES16.10,1x,ES16.10,400ES13.6)' ) &
            0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , LISA( : , 1 )
 
+  ! --- Get snapshot numbers ---
+  IF ( IARGC() .NE. 2 ) THEN
+     WRITE(*,'(A30)') 'Proper usage: ./strain SSL SSU'
+     WRITE(*,'(A10)') 'Exiting...'
+  END IF
+
+  DO i = 1 , IARGC()
+     CALL GETARG( i , arg )
+     READ( arg , * ) SS(i)
+  END DO
+
   ! --- Loop through Illustris snapshots ---
-  DO Nss = 26 , 27!135
+  DO Nss = SS(1) , SS(2)
 
     IF ( ( Nss .NE. 53 ) .AND. ( Nss .NE. 55 ) ) THEN
-      !OPEN ( 102 , FILE = 'Nss.dat' )
-      !WRITE( 102 , '(I3)' ) Nss
-      !CLOSE( 102 )
+      OPEN ( 102 , FILE = 'Nss.dat' )
+      WRITE( 102 , '(I3)' ) Nss
+      CLOSE( 102 )
 
       ! --- Get filenames
       IF ( Nss < 100 ) THEN
-        FMTIN = '(A18,I2,A4)'
+        FMTIN = '(A21,I2,A4)'
       ELSE
-        FMTIN = '(A18,I3,A4)'
+        FMTIN = '(A21,I3,A4)'
       END IF
 
-      WRITE( FILEIN  , FMTIN  ) 'time_BHillustris1_' , Nss , '.dat'
+      WRITE( FILEIN  , FMTIN  ) '../time_BHillustris1_' , Nss , '.dat'
 
       ! --- Get number of lines (mergers) in Illustris data file ---
       nLinesIllustris = 0
