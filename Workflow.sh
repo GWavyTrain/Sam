@@ -21,10 +21,10 @@ for (( i = 0 ; i < $Nproc ; i++ ))
 
     NewDir=strain_$SSL-$SSUf
 
-    mkdir $NewDir
-    cp strain $NewDir
+    echo mkdir $NewDir
+    echo cp strain $NewDir
 
-    cd $NewDir
+    echo cd $NewDir
     echo "./strain $SSL $SSUf &"
-    cd ..
+    echo cd ..
   done
