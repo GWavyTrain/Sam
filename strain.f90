@@ -59,7 +59,7 @@ PROGRAM GWstrainFromBHBmergers
   WRITE( 100 , '(A59)' ) &
          '# ID, M1, M2, tLB [Gyr], z, f_ISCO, r_comoving [Mpc], hc(f)'
   WRITE( 100 , '(I7,1x,F7.4,1x,F7.4,1x,F13.10,1x,ES16.10,1x, &
-                   ES16.10,1x,ES16.10,400ES13.6)' ) &
+                   ES16.10,1x,ES16.10,10ES13.6)' ) &
            0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , LISA( : , 1 )
 
   ! --- Get snapshot numbers ---
