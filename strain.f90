@@ -64,6 +64,7 @@ PROGRAM GWstrainFromBHBmergers
 
   ! --- Get snapshot numbers ---
   IF ( IARGC() .NE. 2 ) THEN
+     WRITE(*,'(A6)')  'ERROR:'
      WRITE(*,'(A30)') 'Proper usage: ./strain SSL SSU'
      WRITE(*,'(A10)') 'Exiting...'
   END IF
