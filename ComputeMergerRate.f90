@@ -3,20 +3,32 @@ PROGRAM ComputeMergerRate
   IMPLICIT NONE
 
   INTEGER  , PARAMETER   :: DP = KIND( 1.d0 )
-  INTEGER  , PARAMETER   :: Nq = 10000
-  INTEGER  , PARAMETER   :: itLB = 4 , iz = 5
+  INTEGER  , PARAMETER   :: Nq = 10000 , Nz = 100000
+  INTEGER  , PARAMETER   :: itLB = 4
   REAL(DP) , PARAMETER   :: PI = ACOS( -1.0d0 )
+  REAL(DP) , PARAMETER   :: z_max = 25.0d0 , dz = z_max / ( Nz - 1 )
   REAL(DP) , PARAMETER   :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
   REAL(DP) , PARAMETER   :: H0 = 70.4d0 / 3.086d19
-  REAL(DP) , PARAMETER   :: c = 2.99792458d10 , dt = 0.01d0
+  REAL(DP) , PARAMETER   :: c = 2.99792458d10 , dt = 0.01d0 , Gpc = 3.086d24
   REAL(DP) , PARAMETER   :: year = 86400.0d0 * 365.25d0 , Gyr = 1.0d9 * year
   REAL(DP) , ALLOCATABLE :: BinEdges(:) , Bins(:)
-  REAL(DP) , ALLOCATABLE :: hc(:,:) , data(:,:) , Counts(:)
-  REAL(DP)               :: tShort , tLong , zMin , zMax
+  REAL(DP) , ALLOCATABLE :: hc(:,:) , tLB(:) , Counts(:)
+  REAL(DP)               :: tShort , tLong , Vc , z_arr(Nz) , tLB_z_arr(Nz)
   INTEGER                :: i , j , nMergers , nBins
 
+  ! --- Create lookback time array in Gyr ---
+  OPEN( 100 , FILE = 'tLB_z.dat' )
+  ! --- Compute array of lookback times in Gyr ---
+  WRITE( 100 , '(A14)' ) '# z, tLB [Gyr]'
+  DO i = 1 , Nz
+    z_arr(i)     = ( i - 1 ) * dz
+    tLB_z_arr(i) = ComputeLookbackTime( z_arr(i) )
+    WRITE( 100 , '(ES16.10,1x,F13.10)' ) z_arr(i) , tLB_z_arr(i)
+  END DO
+  CLOSE( 100 )
+  
   ! --- Get number of mergers in hc.dat file ---
-  OPEN( 100 , FILE = 'hc.dat' )
+  OPEN( 100 , FILE = 'hc.dat' , STATUS = 'OLD' )
   READ( 100 , * ) ! --- Skip the header ---
   READ( 100 , * ) ! --- Skip the line with frequencies ---  
   nMergers = 0
@@ -26,101 +38,64 @@ PROGRAM ComputeMergerRate
   END DO
   10 CLOSE( 100 )
 
-  ! --- Read in hc file and get merger times and redshifts for each ---
-  ALLOCATE( hc  ( nMergers , 17 ) )
-  ALLOCATE( data( nMergers , 3  ) )
-  OPEN( 100 , FILE = 'hc.dat' )
+  ! --- Read in hc file and get merger lookback times in Gyr for each ---
+  ALLOCATE( hc ( nMergers , 17 ) )
+  ALLOCATE( tLB( nMergers ) )
+  OPEN( 100 , FILE = 'hc.dat' , STATUS = 'OLD' )
   READ( 100 , * ) ! --- Skip the header ---
   READ( 100 , * ) ! --- Skip the line with frequencies ---
   DO i = 1 , nMergers
     READ( 100 , * ) hc( i , : )
-    data(i,1) = hc( i , itLB )                     ! tLB [ Gyr ]
-    data(i,2) = hc( i , iz   )                     ! z   [ dimensionless ]
-    data(i,3) = ComputeComovingVolume( data(i,2) ) ! Vc  [ cm^3 ]
+    tLB(i) = hc( i , itLB )
   END DO
   CLOSE( 100 )
 
-  tShort = MINVAL( data(:,1) )
-  zMin   = MINVAL( data(:,2) )
-  tLong  = MAXVAL( data(:,1) )
-  zMax   = MAXVAL( data(:,2) )
+  tShort = MINVAL( tLB )
+  tLong  = MAXVAL( tLB )
 
-  tShort = tShort
-  tLong  = tLong  + dt
-
-  ! --- Create lookback time bins/bin edges ---
+  ! --- Create lookback time bins/bin edges in Gyr ---
+  tShort    = tShort
+  tLong     = tLong  + dt
   nBins = CEILING( ( tLong - tShort ) / dt )
   ALLOCATE( Bins(nBins) )
   ALLOCATE( BinEdges(nBins+1) )
+  BinEdges = CreateLookbackTimeBinEdges( nBins )
 
-  BinEdges = CreateLookbackTimeBinEdges( tShort , nBins )
-
+  ! --- Create and initialize array to hold counts ---
   ALLOCATE( Counts(nBins) )
   Counts = 0.0d0
 
   ! --- Populate array with counts ---
-  OPEN( 100 , FILE = 'MergerRateCounts.dat' )
-  WRITE( 100 , '(A28)' ) '# bin centers [Gyr] , counts'
+  OPEN( 100 , FILE = 'MergerRateDensity.dat' )
+  WRITE( 100 , '(A61)' ) &
+       '# bin centers [Gyr] , Merger Rate Density [Gpc^(-3)*yr^(-1)]'
+  CLOSE( 100 )
   DO i = 1 , nBins
+    OPEN( 100 , FILE = 'MergerRateDensity.dat' , POSITION = 'APPEND' )
     DO j = 1 , nMergers
-       IF ( ( data(j,1) >= BinEdges(i)   ) .AND. &
-            ( data(j,1) <  BinEdges(i+1) ) ) Counts(i) = Counts(i) + 1
+       IF ( ( tLB(j) >= BinEdges(i)   ) .AND. &
+            ( tLB(j) <  BinEdges(i+1) ) ) Counts(i) = Counts(i) + 1
     END DO
     Bins(i) = ( BinEdges(i) + BinEdges(i+1) ) / 2.0d0
-    WRITE( 100 , '(ES18.10E3,1x,ES16.10E2)' ) Bins(i) , Counts(i)
+    ! --- Convert merger rate to merger rate density ---
+    Vc = ComputeComovingVolumeFromLookbackTime( Bins(i) )
+    WRITE( 100 , '(ES18.10E3,1x,ES18.10E3)' ) Bins(i) , Counts(i) / Vc / 1.0d9
+    CLOSE( 100 )
   END DO
-  CLOSE( 100 )
-  
+
   DEALLOCATE( Counts   )
   DEALLOCATE( BinEdges )
   DEALLOCATE( Bins     )
-  DEALLOCATE( data     )
+  DEALLOCATE( tLB      )
   DEALLOCATE( hc       )
 
 CONTAINS
 
-  ! --- Integrand 1/E(z) in cosmological distance calculation ---
-  PURE FUNCTION OneOverE( z )
+  FUNCTION CreateLookbackTimeBinEdges( nBins ) RESULT( BinEdges )
 
-    REAL(DP) , INTENT(in) :: z
-    REAL(DP)              :: OneOverE
-
-    OneOverE = 1.0d0 / SQRT( OMEGA_M * ( 1.0d0 + z )**3 + OMEGA_L )
-
-    RETURN
-  END FUNCTION OneOverE
-
-  
-  ! --- Compute comoving volume at redshift z ---
-  FUNCTION ComputeComovingVolume( z ) RESULT( V )
-
-    REAL(DP) , INTENT(in) :: z
-    INTEGER               :: k
-    REAL(DP)              :: r , V , dz
-
-    ! --- Integrate with Trapezoidal rule to get comoving distance ---
-    r  = 0.0d0
-    dz = z / Nq
-    
-    DO k = 1 , Nq - 1
-       r = r + OneOverE( k * dz )
-    END DO
-
-    r = c / H0 * dz / 2.0d0 * ( OneOverE( 0.0d0 ) + 2.0d0 * r + OneOverE( z ) )
-
-    V = 4.0d0 / 3.0d0 * PI * r**3
-
-    RETURN
-  END FUNCTION ComputeComovingVolume
-
-  
-  ! --- Create bin edges for lookback time ---
-  FUNCTION CreateLookbackTimeBinEdges( tShort , nBins ) RESULT( BinEdges )
-
-    REAL(DP) , INTENT(in) :: tShort
-    INTEGER  , INTENT(in) :: nBins
-    INTEGER               :: i
-    REAL(DP)              :: BinEdges(nBins+1)
+    INTEGER , INTENT(in) :: nBins
+    REAL(DP)             :: BinEdges(nBins+1)
+    INTEGER              :: i
 
     DO i = 1 , nBins + 1
       BinEdges(i) = tShort + ( i - 1 ) * dt
@@ -128,6 +103,127 @@ CONTAINS
 
     RETURN
   END FUNCTION CreateLookbackTimeBinEdges
+
+
+  ! --- Integrand for lookback time calculation ---
+  PURE FUNCTION OneOverE_LB( z )
+
+    REAL(DP) , INTENT(in) :: z
+    REAL(DP)              :: OneOverE_LB
+
+    OneOverE_LB = 1.0d0 / ( ( 1.0d0 + z ) &
+                    * SQRT( OMEGA_M * ( 1.0d0 + z )**3 + OMEGA_L ) )
+    
+    RETURN
+  END FUNCTION OneOverE_LB
+
+  
+  FUNCTION ComputeLookbackTime( z ) RESULT( tLB )
+
+    REAL(DP) , INTENT(in) :: z
+    REAL(DP)              :: dz , tLB
+    INTEGER               :: i
+    
+    dz  = z / Nq
+
+    tLB = 0.0d0
+    DO i = 1 , Nq - 1
+      tLB = tLB + OneOverE_LB( i * dz )
+    END DO
+
+    tLB = 1.0d0 / H0 * dz / 2.0d0 &
+            * ( OneOverE_LB( 0.0d0 ) + 2.0d0 * tLB + OneOverE_LB( z ) ) / Gyr
+    
+    RETURN
+  END FUNCTION ComputeLookbackTime
+  
+
+  ! --- Interpolate lookback time to get redshift ---
+  FUNCTION InterpolateLookbackTime( tLB ) RESULT( z )
+
+    REAL(DP) , INTENT(in) :: tLB
+    REAL(DP)              :: zmin , zmax , tLBmin , tLBmax , tLBk , m , b
+    REAL(DP)              :: z
+    INTEGER               :: k
+
+    ! --- Small lookback time approximation: tLB ~ tH * z ---
+    IF ( tLB < 0.1d0 ) THEN
+      z = tLB * ( H0 * Gyr )
+      RETURN
+    END IF
+
+    IF ( tLB < tLB_z_arr(Nz) ) THEN
+
+      ! --- Interpolate using linear interpolation ---
+
+      ! --- Get redshift bounds ---
+      k = 1
+      tLBk = tLB_z_arr(k)
+      DO WHILE ( tLBk < tLB )
+        k = k + 1
+        tLBk = tLB_z_arr(k)
+      END DO
+
+      zmin   = z_arr(k-1)
+      zmax   = z_arr(k)
+      tLBmin = tLB_z_arr(k-1)
+      tLBmax = tLB_z_arr(k)
+
+    ELSE
+
+      ! --- Extrapolate using linear extrapolation ---
+
+      zmin   = z_arr(Nz-1)
+      zmax   = z_arr(Nz)
+      tLBmin = tLB_z_arr(Nz-1)
+      tLBmax = tLB_z_arr(Nz)
+
+    END IF
+
+    ! --- tLB = m * z + b ---
+    m = ( tLBmax - tLBmin ) / ( zmax - zmin )
+    b = 0.5_DP * ( ( tLBmax - m * zmax ) + ( tLBmin - m * zmin ) )
+
+    z = ( tLB - b ) / m
+
+    RETURN
+  END FUNCTION InterpolateLookbackTime
+
+  ! --- Integrand for comoving distance calculation ---
+  PURE FUNCTION E( z )
+
+    REAL(DP) , INTENT(in) :: z
+    REAL(DP)              :: E
+
+    E = 1.0d0 / SQRT( OMEGA_M * ( 1.0d0 + z )**3 + OMEGA_L )
+
+    RETURN
+  END FUNCTION E
+
+  
+  FUNCTION ComputeComovingVolumeFromLookbackTime( tLB ) RESULT( Vc )
+
+    REAL(DP) , INTENT(in) :: tLB
+    REAL(DP)              :: Dc , dz , Vc , z
+    INTEGER               :: k
+
+    ! --- Get redshift for given lookback time ---
+    z = InterpolateLookbackTime( tLB )
+    
+    ! --- Integrate with Trapezoidal rule ---
+    Dc = 0.0d0
+    dz = z / Nq
+    
+    DO k = 1 , Nq - 1
+       Dc = Dc + E( k * dz )
+    END DO
+
+    Dc = c / H0 * dz / 2.0d0 * ( E( 0.0d0 ) + 2.0d0 * Dc + E( z ) )
+
+    Vc = 4.0d0 / 3.0d0 * PI * ( Dc / Gpc )**3
+
+    RETURN
+  END FUNCTION ComputeComovingVolumeFromLookbackTime
 
 
 END PROGRAM ComputeMergerRate

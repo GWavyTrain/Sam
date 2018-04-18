@@ -4,13 +4,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 np.seterr( divide='ignore' )
 
-bins , rates = np.loadtxt( 'MergerRate.dat' , unpack = True )
+SnapShotRange = '_111-120'
 
-plt.step( bins , np.log10( rates ) , 'k' )
+bins , rates = np.loadtxt( 'MergerRateDensity' + SnapShotRange + '.dat' , \
+                             unpack = True )
+
+plt.step( bins , rates , 'k' )
+plt.yscale( 'log' )
 plt.xlabel( r'$t_{Lookback\ to\ merger}\,\left[Gyr\right]$' )
-plt.ylabel( r'$\ell og_{10}\left(Merger\ Rate\,\left[Gyr^{-1}\right]\right)$' )
+plt.ylabel( r'$Merger\ Rate\,Density\,\left[Gpc^{-3}\,yr^{-1}\right]$' )
 
-plt.title( 'Total merger rate vs. lookback time for BBH mergers\
-\nRedshift Snapshots 101-110' )
-plt.savefig( 'TotalMergerRate.png' )
+plt.title( 'Merger rate density vs. lookback time for BBH mergers\
+\nRedshift Snapshots ' + SnapShotRange[1:] )
+plt.savefig( 'MergerRateDensity' + SnapShotRange + '.png' )
 #plt.show()
+plt.close()
