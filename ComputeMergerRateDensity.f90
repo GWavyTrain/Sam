@@ -14,9 +14,11 @@ PROGRAM ComputeMergerRate
   REAL(DP) , ALLOCATABLE :: BinEdges(:) , Bins(:)
   REAL(DP) , ALLOCATABLE :: hc(:,:) , tLB(:) , Counts(:)
   REAL(DP)               :: tShort , tLong , Vc , z_arr(Nz) , tLB_z_arr(Nz)
-  INTEGER                :: i , j , nMergers , nBins
+  INTEGER                :: i , j
+  INTEGER( KIND = 8 )    :: nMergers , nBins
 
   ! --- Create lookback time array in Gyr ---
+  WRITE(*,'(A)') 'Creating lookback time array'
   OPEN( 100 , FILE = 'tLB_z.dat' )
   ! --- Compute array of lookback times in Gyr ---
   WRITE( 100 , '(A14)' ) '# z, tLB [Gyr]'
@@ -28,6 +30,7 @@ PROGRAM ComputeMergerRate
   CLOSE( 100 )
   
   ! --- Get number of mergers in hc.dat file ---
+  WRITE(*,'(A)') 'Getting number of mergers in hc.dat'
   OPEN( 100 , FILE = 'hc.dat' , STATUS = 'OLD' )
   READ( 100 , * ) ! --- Skip the header ---
   READ( 100 , * ) ! --- Skip the line with frequencies ---  
@@ -37,8 +40,10 @@ PROGRAM ComputeMergerRate
     nMergers = nMergers + 1
   END DO
   10 CLOSE( 100 )
+  WRITE(*,'(A10,I19)') 'nMergers: ' , nMergers
 
   ! --- Read in hc file and get merger lookback times in Gyr for each ---
+  WRITE(*,'(A)') 'Getting merger lookback times'
   ALLOCATE( hc ( nMergers , 17 ) )
   ALLOCATE( tLB( nMergers ) )
   OPEN( 100 , FILE = 'hc.dat' , STATUS = 'OLD' )
@@ -53,21 +58,27 @@ PROGRAM ComputeMergerRate
   tShort = MINVAL( tLB )
   tLong  = MAXVAL( tLB )
 
+  WRITE(*,'(A22,ES17.10E3,A4)') 'Shortest merger time: ' , tShort , ' Gyr'
+  WRITE(*,'(A22,ES17.10E3,A4)') 'Longest merger time:  ' , tLong  , ' Gyr'
+
   ! --- Create lookback time bins/bin edges in Gyr ---
+  WRITE(*,'(A)') 'Creating lookback time bins/bin edges'
   tShort    = tShort
   tLong     = tLong  + dt
   nBins = CEILING( ( tLong - tShort ) / dt )
   ALLOCATE( Bins(nBins) )
   ALLOCATE( BinEdges(nBins+1) )
   BinEdges = CreateLookbackTimeBinEdges( nBins )
+  WRITE(*,'(A7,I19)') 'nBins: ' , nBins
 
   ! --- Create and initialize array to hold counts ---
   ALLOCATE( Counts(nBins) )
   Counts = 0.0d0
 
   ! --- Populate array with counts ---
+  WRITE(*,'(A)') 'Populating counts array'
   OPEN( 100 , FILE = 'MergerRateDensity.dat' )
-  WRITE( 100 , '(A61)' ) &
+  WRITE( 100 , '(A60)' ) &
        '# bin centers [Gyr] , Merger Rate Density [Gpc^(-3)*yr^(-1)]'
   CLOSE( 100 )
   DO i = 1 , nBins
@@ -93,9 +104,9 @@ CONTAINS
 
   FUNCTION CreateLookbackTimeBinEdges( nBins ) RESULT( BinEdges )
 
-    INTEGER , INTENT(in) :: nBins
-    REAL(DP)             :: BinEdges(nBins+1)
-    INTEGER              :: i
+    INTEGER( KIND = 8 ) , INTENT(in) :: nBins
+    REAL(DP)                         :: BinEdges(nBins+1)
+    INTEGER                          :: i
 
     DO i = 1 , nBins + 1
       BinEdges(i) = tShort + ( i - 1 ) * dt
