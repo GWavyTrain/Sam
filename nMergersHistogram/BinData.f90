@@ -6,28 +6,32 @@ PROGRAM BinMergers
   INTEGER,  PARAMETER   :: ix = 1
   REAL(DP), PARAMETER   :: dx = 1.0d-1
   REAL(DP), ALLOCATABLE :: mergers(:,:), BinEdges(:), Bins(:), Counts(:), x(:)
-  REAL(DP)              :: xMin, xMax, StartTime, StopTime
-  INTEGER               :: i, LOGFILE = 120
-  INTEGER( KIND = 8 )   :: iMerger, nMergers, nBins
+  REAL(DP)              :: xMin, xMax, StartTime, StopTime, ProgStart, ProgEnd
+  INTEGER               :: LOGFILE = 120
+  INTEGER( KIND = 8 )   :: i, iMerger, nMergers, nBins
+
+  CALL CPU_TIME( ProgStart )
 
   ! --- Get total number of mergers  ---
   OPEN ( LOGFILE, FILE = 'log.txt' )
   WRITE( LOGFILE, '(A)' ) 'Getting total number of mergers...'
   CLOSE( LOGFILE )
 
-  OPEN( 100, FILE = 'mergers.dat', STATUS = 'OLD' )
-  nMergers = 0
   CALL CPU_TIME( StartTime )
+  OPEN( 100, FILE = 'mergers.dat', STATUS = 'OLD' )
+  READ( 100, * ) ! --- Skip header ---
+  nMergers = 0
   DO
     READ( 100, *, END = 10 )
     nMergers = nMergers + 1
   END DO
-  CALL CPU_TIME( StopTime )
   10 CLOSE( 100 )
+  CALL CPU_TIME( StopTime )
 
   OPEN ( LOGFILE, FILE = 'log.txt', POSITION = 'APPEND' )
   WRITE( LOGFILE, '(A,I19)' ) 'nMergers: ', nMergers
-  WRITE( LOGFILE, '(A,ES18.10E3)' ) 'Time to get nMergers: ', StopTime-StartTime
+  WRITE( LOGFILE, '(A,ES18.10E3,A2)' ) &
+    'Time to get nMergers: ', StopTime-StartTime, ' s'
   CLOSE( LOGFILE )
 
   ! --- Read in mergers file and get "x" values (values to be binned) ---
@@ -37,19 +41,21 @@ PROGRAM BinMergers
 
   ALLOCATE( mergers( nMergers, 2 ) )
   ALLOCATE( x( nMergers ) )
-  OPEN( 100, FILE = 'mergers.dat', STATUS = 'OLD' )
   CALL CPU_TIME( StartTime )
+  OPEN( 100, FILE = 'mergers.dat', STATUS = 'OLD' )
+  READ( 100, * ) ! --- Skip header ---
   DO iMerger = 1, nMergers
     READ( 100, * ) mergers( iMerger, : )
     x(iMerger) = mergers( iMerger, ix )
   END DO
-  CALL CPU_TIME( StopTime )
   CLOSE( 100 )
+  CALL CPU_TIME( StopTime )
   xMin = MINVAL( x )
   xMax = MAXVAL( x )
 
   OPEN ( LOGFILE, FILE = 'log.txt', POSITION = 'APPEND' )
-  WRITE( LOGFILE, '(A,ES18.10E3)' ) 'Time to read in x values: ', StopTime-StartTime
+  WRITE( LOGFILE, '(A,ES18.10E3,A2)' ) &
+    'Time to read in x values: ', StopTime-StartTime, ' s'
   WRITE( LOGFILE, '(A,ES18.10E3)') 'xMin: ', xMin
   WRITE( LOGFILE, '(A,ES18.10E3)') 'xMax: ', xMax
   CLOSE( LOGFILE )
@@ -95,7 +101,8 @@ PROGRAM BinMergers
   CALL CPU_Time( StopTime )
 
   OPEN ( LOGFILE, FILE = 'log.txt', POSITION = 'APPEND' )
-  WRITE( LOFILE, '(A,ES18.10E3)' ) 'Time to populate counts array: ', StopTime-StartTime
+  WRITE( LOGFILE, '(A,ES18.10E3,A2)' ) &
+    'Time to populate counts array: ', StopTime-StartTime, ' s'
   CLOSE( LOGFILE )
 
   DEALLOCATE( Counts   )
@@ -103,6 +110,14 @@ PROGRAM BinMergers
   DEALLOCATE( Bins     )
   DEALLOCATE( x        )
   DEALLOCATE( mergers  )
+
+  CALL CPU_TIME( ProgEnd )
+
+  OPEN ( LOGFILE, FILE = 'log.txt', POSITION = 'APPEND' )
+  WRITE( LOGFILE, '(A,ES18.10E3,A2)' ) &
+    'Total program runtime: ', ProgEnd-ProgStart, ' s'
+  CLOSE( LOGFILE )
+
 
 CONTAINS
 

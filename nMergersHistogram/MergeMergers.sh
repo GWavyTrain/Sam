@@ -2,6 +2,8 @@
 
 touch mergers.dat
 
+echo "# tLb [Gyr], z" >> mergers.dat
+
 cat mergers_026-039.dat >> mergers.dat
 cat mergers_040-053.dat >> mergers.dat
 cat mergers_054-067.dat >> mergers.dat
