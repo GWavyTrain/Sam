@@ -18,7 +18,7 @@ PROGRAM BinMergers
   CLOSE( LOGFILE )
 
   CALL CPU_TIME( StartTime )
-  OPEN( 100, FILE = 'mergers.dat', STATUS = 'OLD' )
+  OPEN( 100, FILE = 'mergers_chunk1.dat', STATUS = 'OLD' )
   READ( 100, * ) ! --- Skip header ---
   nMergers = 0
   DO
@@ -42,7 +42,7 @@ PROGRAM BinMergers
   ALLOCATE( mergers( nMergers, 2 ) )
   ALLOCATE( x( nMergers ) )
   CALL CPU_TIME( StartTime )
-  OPEN( 100, FILE = 'mergers.dat', STATUS = 'OLD' )
+  OPEN( 100, FILE = 'mergers_chunk1.dat', STATUS = 'OLD' )
   READ( 100, * ) ! --- Skip header ---
   DO iMerger = 1, nMergers
     READ( 100, * ) mergers( iMerger, : )
