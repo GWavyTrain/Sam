@@ -8,6 +8,8 @@ echo Total number of mergers: $Tot
 ChunkSize=100000000
 echo Chunk size: $ChunkSize
 
+echo Total number of chunks: $(( Tot / ChunkSize + 1 ))
+
 chunk=1
 
 Min=2

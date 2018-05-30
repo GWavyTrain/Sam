@@ -7,19 +7,38 @@ PROGRAM BinMergers
   REAL(DP), PARAMETER   :: dx = 1.0d-1
   REAL(DP), ALLOCATABLE :: mergers(:,:), BinEdges(:), Bins(:), Counts(:), x(:)
   REAL(DP)              :: xMin, xMax, StartTime, StopTime, ProgStart, ProgEnd
-  INTEGER               :: LOGFILE = 120
+  INTEGER               :: LOGFILE = 120, chunk
   INTEGER( KIND = 8 )   :: i, iMerger, nMergers, nBins
+  CHARACTER( LEN = 6 )  :: arg
+  CHARACTER( LEN = 14 ) :: LogFileName, LogFileNameOld
+  CHARACTER( LEN = 24 ) :: MergersFileName, MergersFileNameOld
+
+  IF ( IARGC() .NE. 1 ) THEN
+    WRITE(*,'(A)') 'Proper usage: ./BinData chunk'
+    WRITE(*,'(A)') 'Exiting...'
+    STOP
+  END IF
+
+  CALL GETARG( 1, arg )
+  READ( arg, * ) chunk
+
+  WRITE( LogFileNameOld, '(A4,A,A4)' ) 'log_', arg, '.txt'
+  LogFileName &
+    =  StripWhiteSpace( LogFileNameOld, LEN( LogFileNameOld ) )
+
+  WRITE( MergersFileNameOld, '(A13,A,A4)' ) 'mergers_chunk', arg, '.dat'
+  MergersFileName &
+    = StripWhiteSpace( MergersFileNameOld, LEN( MergersFileNameOld ) )
 
   CALL CPU_TIME( ProgStart )
 
   ! --- Get total number of mergers  ---
-  OPEN ( LOGFILE, FILE = 'log.txt' )
+  OPEN ( LOGFILE, FILE = TRIM( LogFileName ) )
   WRITE( LOGFILE, '(A)' ) 'Getting total number of mergers...'
   CLOSE( LOGFILE )
 
   CALL CPU_TIME( StartTime )
-  OPEN( 100, FILE = 'mergers_chunk1.dat', STATUS = 'OLD' )
-  READ( 100, * ) ! --- Skip header ---
+  OPEN( 100, FILE = TRIM( MergersFileName ), STATUS = 'OLD' )
   nMergers = 0
   DO
     READ( 100, *, END = 10 )
@@ -28,22 +47,21 @@ PROGRAM BinMergers
   10 CLOSE( 100 )
   CALL CPU_TIME( StopTime )
 
-  OPEN ( LOGFILE, FILE = 'log.txt', POSITION = 'APPEND' )
+  OPEN ( LOGFILE, FILE = TRIM( LogFileName ), POSITION = 'APPEND' )
   WRITE( LOGFILE, '(A,I19)' ) 'nMergers: ', nMergers
   WRITE( LOGFILE, '(A,ES18.10E3,A2)' ) &
     'Time to get nMergers: ', StopTime-StartTime, ' s'
   CLOSE( LOGFILE )
 
   ! --- Read in mergers file and get "x" values (values to be binned) ---
-  OPEN ( LOGFILE, FILE = 'log.txt', POSITION = 'APPEND' )
+  OPEN ( LOGFILE, FILE = TRIM( LogFileName ), POSITION = 'APPEND' )
   WRITE( LOGFILE, '(A)' ) 'Getting x values...'
   CLOSE( LOGFILE )
 
   ALLOCATE( mergers( nMergers, 2 ) )
   ALLOCATE( x( nMergers ) )
   CALL CPU_TIME( StartTime )
-  OPEN( 100, FILE = 'mergers_chunk1.dat', STATUS = 'OLD' )
-  READ( 100, * ) ! --- Skip header ---
+  OPEN( 100, FILE = TRIM( MergersFileName ), STATUS = 'OLD' )
   DO iMerger = 1, nMergers
     READ( 100, * ) mergers( iMerger, : )
     x(iMerger) = mergers( iMerger, ix )
@@ -53,7 +71,7 @@ PROGRAM BinMergers
   xMin = MINVAL( x )
   xMax = MAXVAL( x )
 
-  OPEN ( LOGFILE, FILE = 'log.txt', POSITION = 'APPEND' )
+  OPEN ( LOGFILE, FILE = TRIM( LogFileName ), POSITION = 'APPEND' )
   WRITE( LOGFILE, '(A,ES18.10E3,A2)' ) &
     'Time to read in x values: ', StopTime-StartTime, ' s'
   WRITE( LOGFILE, '(A,ES18.10E3)') 'xMin: ', xMin
@@ -61,7 +79,7 @@ PROGRAM BinMergers
   CLOSE( LOGFILE )
 
   ! --- Create bins/bin edges ---
-  OPEN ( LOGFILE, FILE = 'log.txt', POSITION = 'APPEND' )
+  OPEN ( LOGFILE, FILE = TRIM( LogFileName ), POSITION = 'APPEND' )
   WRITE( LOGFILE, '(A)' ) 'Creating bins/bin edges...'
   CLOSE( LOGFILE )
 
@@ -71,7 +89,7 @@ PROGRAM BinMergers
   ALLOCATE( Bins(nBins) )
   ALLOCATE( BinEdges(nBins+1) )
   BinEdges = CreateBinEdges( nBins )
-  OPEN ( LOGFILE, FILE = 'log.txt', POSITION = 'APPEND' )
+  OPEN ( LOGFILE, FILE = TRIM( LogFileName ), POSITION = 'APPEND' )
   WRITE( LOGFILE, '(A,I19)' ) 'nBins: ', nBins
   CLOSE( LOGFILE )
 
@@ -80,7 +98,7 @@ PROGRAM BinMergers
   Counts = 0.0d0
 
   ! --- Populate array with counts ---
-  OPEN ( LOGFILE, FILE = 'log.txt', POSITION = 'APPEND' )
+  OPEN ( LOGFILE, FILE = TRIM( LogFileName ), POSITION = 'APPEND' )
   WRITE( LOGFILE, '(A)' ) 'Populating counts array...'
   CLOSE( LOGFILE )
 
@@ -100,7 +118,7 @@ PROGRAM BinMergers
   END DO
   CALL CPU_Time( StopTime )
 
-  OPEN ( LOGFILE, FILE = 'log.txt', POSITION = 'APPEND' )
+  OPEN ( LOGFILE, FILE = TRIM( LogFileName ), POSITION = 'APPEND' )
   WRITE( LOGFILE, '(A,ES18.10E3,A2)' ) &
     'Time to populate counts array: ', StopTime-StartTime, ' s'
   CLOSE( LOGFILE )
@@ -113,7 +131,7 @@ PROGRAM BinMergers
 
   CALL CPU_TIME( ProgEnd )
 
-  OPEN ( LOGFILE, FILE = 'log.txt', POSITION = 'APPEND' )
+  OPEN ( LOGFILE, FILE = TRIM( LogFileName ), POSITION = 'APPEND' )
   WRITE( LOGFILE, '(A,ES18.10E3,A2)' ) &
     'Total program runtime: ', ProgEnd-ProgStart, ' s'
   CLOSE( LOGFILE )
@@ -133,5 +151,31 @@ CONTAINS
 
     RETURN
   END FUNCTION CreateBinEdges
+
+  FUNCTION StripWhiteSpace( FileNameOld, LenFileNameOld ) RESULT( FileNameNew )
+
+    INTEGER, INTENT(in)                           :: LenFileNameOld
+    CHARACTER( LEN = LenFileNameOld ), INTENT(in) :: FileNameOld
+    CHARACTER( LEN = LenFileNameOld )             :: FileNameNew
+    INTEGER                                       :: LenFileNameNew
+    INTEGER                                       :: iChar, jChar, WS=0
+
+    ! --- Get number of whitespaces in old file ---
+    iChar = 1
+    DO WHILE ( iChar .LT. LenFileNameOld )
+      IF ( FileNameOld( iChar:iChar ) .EQ. ' ') WS = WS + 1
+      iChar = iChar + 1
+    END DO
+
+    LenFileNameNew = LenFileNameOld - WS
+    jChar = 1
+    DO iChar = 1, LenFileNameOld
+       IF ( FileNameOld( iChar:iChar ) .NE. ' ') THEN
+         FileNameNew( jChar:jChar ) = FileNameOld( iChar:iChar )
+         jChar = jChar + 1
+       END IF
+    END DO
+
+  END FUNCTION StripWhiteSpace
 
 END PROGRAM BinMergers
