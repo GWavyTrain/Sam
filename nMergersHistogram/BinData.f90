@@ -12,6 +12,7 @@ PROGRAM BinMergers
   CHARACTER( LEN = 6 )  :: arg
   CHARACTER( LEN = 14 ) :: LogFileName, LogFileNameOld
   CHARACTER( LEN = 24 ) :: MergersFileName, MergersFileNameOld
+  CHARACTER( LEN = 25 ) :: nBinnedMergersFile
 
   IF ( IARGC() .NE. 1 ) THEN
     WRITE(*,'(A)') 'Proper usage: ./BinData chunk'
@@ -29,6 +30,10 @@ PROGRAM BinMergers
   WRITE( MergersFileNameOld, '(A13,A,A4)' ) 'mergers_chunk', arg, '.dat'
   MergersFileName &
     = StripWhiteSpace( MergersFileNameOld, LEN( MergersFileNameOld ) )
+
+  WRITE( nBinnedMergersFile, '(A15,A,A4)' ) 'nMergersBinned_', arg, '.dat'
+  nBinnedMergersFile &
+    = StripWhiteSpace( nBinnedMergersFile, LEN( nBinnedMergersFile ) )
 
   CALL CPU_TIME( ProgStart )
 
@@ -102,12 +107,12 @@ PROGRAM BinMergers
   WRITE( LOGFILE, '(A)' ) 'Populating counts array...'
   CLOSE( LOGFILE )
 
-  OPEN ( 100 , FILE = 'nMergersBinned.dat' )
+  OPEN ( 100 , FILE = TRIM( nBinnedMergersFile ) )
   WRITE( 100 , '(A)' ) '# bin centers, counts'
   CLOSE( 100 )
   CALL CPU_Time( StartTime )
   DO i = 1, nBins
-    OPEN( 100, FILE = 'nMergersBinned.dat', POSITION = 'APPEND' )
+    OPEN( 100, FILE = TRIM( nBinnedMergersFile ), POSITION = 'APPEND' )
     DO iMerger = 1, nMergers
        IF ( ( x(iMerger) >= BinEdges(i)   ) .AND. &
             ( x(iMerger) <  BinEdges(i+1) ) ) Counts(i) = Counts(i) + 1
