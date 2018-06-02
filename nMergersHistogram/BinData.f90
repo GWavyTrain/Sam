@@ -73,8 +73,12 @@ PROGRAM BinMergers
   END DO
   CLOSE( 100 )
   CALL CPU_TIME( StopTime )
-  xMin = MINVAL( x )
-  xMax = MAXVAL( x )
+
+  xMin = 9.6781981984E-08
+  xMax = 1.3581565412E+01
+
+!  xMin = MINVAL( x )
+!  xMax = MAXVAL( x )
 
   OPEN ( LOGFILE, FILE = TRIM( LogFileName ), POSITION = 'APPEND' )
   WRITE( LOGFILE, '(A,ES18.10E3,A2)' ) &
