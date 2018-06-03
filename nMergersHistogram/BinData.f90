@@ -3,8 +3,8 @@ PROGRAM BinMergers
   IMPLICIT NONE
 
   INTEGER,  PARAMETER   :: DP = KIND( 1.d0 )
-  INTEGER,  PARAMETER   :: ix = 1
-  REAL(DP), PARAMETER   :: dx = 1.0d-1
+  INTEGER,  PARAMETER   :: ix = 2
+  REAL(DP), PARAMETER   :: dx = 1.0d-2
   REAL(DP), ALLOCATABLE :: mergers(:,:), BinEdges(:), Bins(:), Counts(:), x(:)
   REAL(DP)              :: xMin, xMax, StartTime, StopTime, ProgStart, ProgEnd
   INTEGER               :: LOGFILE = 120, chunk
@@ -74,11 +74,8 @@ PROGRAM BinMergers
   CLOSE( 100 )
   CALL CPU_TIME( StopTime )
 
-  xMin = 9.6781981984E-08
-  xMax = 1.3581565412E+01
-
-!  xMin = MINVAL( x )
-!  xMax = MAXVAL( x )
+  xMin = 7.2033238735E-03
+  xMax = 1.3592065412E+01
 
   OPEN ( LOGFILE, FILE = TRIM( LogFileName ), POSITION = 'APPEND' )
   WRITE( LOGFILE, '(A,ES18.10E3,A2)' ) &
