@@ -10,7 +10,7 @@ plt.rcParams[ 'ytick.labelsize' ] = 14
 plt.rcParams[ 'axes.labelsize' ] = 15
 
 # Load in data
-f_LISA, PSD_LISA = np.loadtxt( '../LISA_sensitivity/LISA_sensitivity.dat', \
+f_LISA, PSD_LISA = np.loadtxt( '../../LISA_sensitivity/LISA_sensitivity.dat', \
                                unpack = True )
 dataS            = np.loadtxt( 'hcSmallNf.dat' )
 data             = np.loadtxt( 'hc.dat' )

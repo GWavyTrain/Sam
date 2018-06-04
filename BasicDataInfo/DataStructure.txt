@@ -1,0 +1,27 @@
+Contains snapshots 26-135, missing 54 and 56
+
+Naming:
+time_BHillustris1_XXX.dat, XXX is snapshot number
+
+Structure of data files:
+
+Col 1:  Illustris particle ID (15-17 digit integer)
+
+Col 2:  Illustris particle initial mass at formation in units of 1e10 Msun/h, h = 0.704
+
+Col 3:  Snapshot redshift
+
+Col 4:  Illustris particle metallicity (as Z absolute values)
+
+Col 5:  Metallicity of the simulated binary (as Z absolute values)
+
+Col 6:  Identifier of the merging BH binary
+
+Col 7:  Mass of the first BH in Msun (source frame)
+
+Col 8:  Mass of the second BH in Msun (source frame), note that the second BH is not necessarily the less massive
+
+Col 9:  Delay time (between formation of the stellar progenitor and coalescence of BH binary, in Gyr)
+
+Col 10: BH binary merger time (as a look back time with respect to us, in Gyr)
+

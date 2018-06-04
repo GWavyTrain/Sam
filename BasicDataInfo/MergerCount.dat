@@ -1,0 +1,120 @@
+# This data obtained from executing CountMergers.f90
+
+# Merger count info
+# -----------------
+            1144124 # snapshot  26
+             832362 # snapshot  27
+            1314575 # snapshot  28
+            1624285 # snapshot  29
+            2330575 # snapshot  30
+            3449655 # snapshot  31
+            3445313 # snapshot  32
+            1814114 # snapshot  33
+            6893618 # snapshot  34
+            8328529 # snapshot  35
+            2488516 # snapshot  36
+           14975246 # snapshot  37
+           20471194 # snapshot  38
+           27296183 # snapshot  39
+           31674253 # snapshot  40
+           25291006 # snapshot  41
+           18913383 # snapshot  42
+           55321859 # snapshot  43
+           69184881 # snapshot  44
+           31706881 # snapshot  45
+           42112779 # snapshot  46
+           91626383 # snapshot  47
+          105657766 # snapshot  48
+           98741504 # snapshot  49
+           27387340 # snapshot  50
+          153577796 # snapshot  51
+          157649759 # snapshot  52
+          344111645 # snapshot  54
+          305145336 # snapshot  56
+          258774335 # snapshot  57
+          279297011 # snapshot  58
+          295648443 # snapshot  59
+          121838570 # snapshot  60
+          188112749 # snapshot  61
+          292883855 # snapshot  62
+          295933428 # snapshot  63
+          266498131 # snapshot  64
+          267519733 # snapshot  65
+          230910824 # snapshot  66
+          226927546 # snapshot  67
+          222903187 # snapshot  68
+          216678246 # snapshot  69
+          180468688 # snapshot  70
+          175551356 # snapshot  71
+          169756120 # snapshot  72
+          136662632 # snapshot  73
+          157530575 # snapshot  74
+          125456020 # snapshot  75
+          120334530 # snapshot  76
+          115478915 # snapshot  77
+          110297592 # snapshot  78
+          105129843 # snapshot  79
+           80639264 # snapshot  80
+           96767762 # snapshot  81
+           74488457 # snapshot  82
+           70886176 # snapshot  83
+           68026631 # snapshot  84
+           65407037 # snapshot  85
+           15809913 # snapshot  86
+           61575184 # snapshot  87
+           44593828 # snapshot  88
+           57455697 # snapshot  89
+           54711413 # snapshot  90
+           52775320 # snapshot  91
+           37727517 # snapshot  92
+           48494442 # snapshot  93
+           35077834 # snapshot  94
+           44519495 # snapshot  95
+           32390172 # snapshot  96
+           41015296 # snapshot  97
+           29620095 # snapshot  98
+           28356890 # snapshot  99
+           27530644 # snapshot 100
+           35058485 # snapshot 101
+           24986619 # snapshot 102
+           24022872 # snapshot 103
+           23211638 # snapshot 104
+           22230679 # snapshot 105
+           21397633 # snapshot 106
+           20366695 # snapshot 107
+           19650643 # snapshot 108
+           18510077 # snapshot 109
+           17909308 # snapshot 110
+           11313769 # snapshot 111
+           16556680 # snapshot 112
+           15754905 # snapshot 113
+           15017378 # snapshot 114
+           14253351 # snapshot 115
+            9044884 # snapshot 116
+           13156680 # snapshot 117
+           12342716 # snapshot 118
+            7974245 # snapshot 119
+           11241411 # snapshot 120
+           10593664 # snapshot 121
+            6754390 # snapshot 122
+            9528533 # snapshot 123
+            6084732 # snapshot 124
+            8505038 # snapshot 125
+            7926971 # snapshot 126
+            4908507 # snapshot 127
+            6832863 # snapshot 128
+            4252654 # snapshot 129
+            5724496 # snapshot 130
+            3442354 # snapshot 131
+            4490668 # snapshot 132
+            2528942 # snapshot 133
+            2810162 # snapshot 134
+             716038 # snapshot 135
+# -----------------
+
+### THIS NUMBER IS WRONG, MAYBE A LONG INT ERROR ###
+#         8223834340 # Total number of mergers
+###
+
+# Actual total number of mergers:
+# 7722072936 = 7.722072936e9
