@@ -1,6 +1,6 @@
 # Program to get basic info about Mapelli data
 
-ProgName = 'BasicDataInfo.py'
+ProgName = 'GetBasicDataInfo.py'
 
 import numpy as np
 from time import time
