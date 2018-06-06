@@ -13,7 +13,6 @@ BinData.exe (compiled from BinData.f90) and BinData.sh
 
 Basic info about mergers.dat:
 -----------------------------
-Don't remember how I got the total number of mergers...
 Total number of mergers: 7.722072936e9
 
 From 'FindMin.py':
