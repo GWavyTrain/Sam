@@ -25,8 +25,8 @@ coalescence of binary) [Gyr]\n\
 # BBH Merger Time (given as lookback time) [Gyr]\n\n' )
 
 with open( LogFile, 'w' ) as f:
-    f.write( '# {:}\n\n'.format(LogFile) )
-    f.write( '# This file was generated with {:}\n\n'.format(ProgName) )
+    f.write( '{:}\n\n'.format(LogFile) )
+    f.write( 'This file was generated with {:}\n\n'.format(ProgName) )
 
 
 ##### Misc. info RE: data files
@@ -51,6 +51,9 @@ for ss in range( ssMin, ssMax+1 ):
             f.write( FileIn + ' does not exist\n' )
         continue
 
+    with open( LogFile, 'a' ) as f:
+        f.write( 'Snapshot {:d}\n'.format(ss) )
+
     SnapshotData = np.loadtxt( FileIn )
 
     for merger in range( SnapshotData.shape[0] ):
@@ -71,5 +74,5 @@ EndTime = time()
 TotRunTime = EndTime - StartTime
 
 with open( FileOut, 'a' ) as f:
-    f.write( '\n# Program end-time: {:}\n'.format(datetime.now()) )
-    f.write( '# Total run-time: {:.10e} s\n'.format(TotRunTime) )
+    f.write( '\nProgram end-time: {:}\n'.format(datetime.now()) )
+    f.write( 'Total run-time: {:.10e} s\n'.format(TotRunTime) )
