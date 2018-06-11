@@ -8,7 +8,7 @@ from datetime import datetime
 ProgName = 'GetUniqueMergers.py'
 FileOut  = 'UniqueMergers.dat'
 FileIn   = 'TrimmedAndCombinedData.dat'
-
+FileIn   = 'tailda.dat'
 with open( FileOut, 'w' ) as f:
     f.write( '# {:}\n\n'.format(FileOut) )
     f.write( '# These data were obtained with {:}\n'.format(ProgName) )
@@ -29,6 +29,6 @@ with open( FileOut, 'a' ) as f:
     f.write( '# Total number of unique mergers: {:.10e}\n\n'.format( UniqueIndices.shape[0] ) )
     for merger in UniqueIndices:
         f.write(str(merger) + '\n')
-    f.write( '\nProgram end-time: {:}\n'.format(datetime.now()) )
-    f.write( 'Total run-time: {:.10e} s\n'.format(TotRunTime) )
+    f.write( '\n# Program end-time: {:}\n'.format(datetime.now()) )
+    f.write( '# Total run-time: {:.10e} s\n'.format(TotRunTime) )
 
