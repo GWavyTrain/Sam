@@ -74,5 +74,5 @@ EndTime = time()
 TotRunTime = EndTime - StartTime
 
 with open( FileOut, 'a' ) as f:
-    f.write( '\nProgram end-time: {:}\n'.format(datetime.now()) )
-    f.write( 'Total run-time: {:.10e} s\n'.format(TotRunTime) )
+    f.write( '\n# Program end-time: {:}\n'.format(datetime.now()) )
+    f.write( '# Total run-time: {:.10e} s\n'.format(TotRunTime) )

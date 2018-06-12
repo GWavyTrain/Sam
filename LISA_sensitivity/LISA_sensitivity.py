@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -17,5 +15,5 @@ plt.ylabel( r'$h_{c}\,\left[dimensionless\right]$' )
 plt.xlim( 1.0e-5,  2.0     )
 plt.ylim( 5.0e-22, 3.0e-17 )
 
-plt.savefig( 'LISA_sensitivity.png' )
-#plt.show()
+#plt.savefig( 'LISA_sensitivity.png' )
+plt.show()
