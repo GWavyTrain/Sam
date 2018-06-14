@@ -38,7 +38,7 @@ elif var == 'SnapshotRedshift':
     plt.title( \
     'Total number of BBH mergers\nas a function of snapshot redshift' )
 
-plt.savefig( 'Mergers_BinnedBy' + var + '.png' )
-#plt.show()
+#plt.savefig( 'Mergers_BinnedBy' + var + '.png' )
+plt.show()
 plt.close()
 #'''

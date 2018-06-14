@@ -15,8 +15,6 @@ Basic info about mergers.dat:
 -----------------------------
 Total number of mergers: 7.722072936e9
 
-From 'FindMin.py':
------------------
 Minimum lookback time: 9.6781981984E-08 Gyr
 Maximum lookback time: 1.3581565412E+01 Gyr
 

@@ -2,8 +2,11 @@
 
 import numpy as np
 
+ChunkNumber = '1'
+
 # Read in data from mergers.dat
-tLb, z = np.loadtxt( 'mergers.dat', unpack = True )
+ID, z, M1, M2, t_delay, tLb \
+  = np.loadtxt( 'UniqueMergers_chunk' + ChunkNumber + '.dat', unpack = True )
 
 # Choose variables to bin and bin-width
 x  = tLb
@@ -34,4 +37,5 @@ for i in range( nBins ):
 Bins = BinEdges[0:-1] + 0.5 * dx
 
 data = np.vstack( ( Bins, Counts ) )
-np.savetxt( 'BinnedData.dat', data.T, header = 'Bin center, counts' )
+np.savetxt( 'BinnedData_chunk' + ChunkNumber + '.dat', data.T, \
+               header = 'Bin center, counts' )

@@ -1,4 +1,7 @@
-echo ''
+# MakeChunks.sh
+
+# Bash script to chunk TrimmedAndCombinedData.dat into Python-friendly pieces
+
 echo Making binnable chunks for TrimmedAndCombinedData.dat
 echo ''
 

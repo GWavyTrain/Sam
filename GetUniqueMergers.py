@@ -1,4 +1,5 @@
-# Program to get array indices of unique mergers from 'TrimmedAndCombinedData.dat'
+# Program to get array indices of unique mergers
+# from /astro1/dunhamsj/nMergersHistogram/ChunkedMergersUnique/*
 
 import numpy as np
 from time import time
