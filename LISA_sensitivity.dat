@@ -5,6 +5,7 @@
 # First column:  frequency [ Hz ]
 # Second column: PSD
 # Characteristic strain: hc = sqrt( PSD * f ) )
+# Eq. (18) in Moore, et al. (2014)
 
    2.0000000000000002e-05	   3.0886941632289195e-29	
 
