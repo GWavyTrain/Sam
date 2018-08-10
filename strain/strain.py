@@ -5,7 +5,7 @@ This program computes the characteristic strain for
 a set of binary black holes for use with Mapelli et al. data
 '''
 
-from numpy import pi, sqrt, loadtxt, empty, linspace
+from numpy import pi, sqrt, loadtxt, empty, linspace, where
 from sys import exit
 from astropy.cosmology import z_at_value
 from scipy.integrate import romberg
@@ -71,9 +71,6 @@ def ComputeComovingDistanceFromLookbackTime( tLb ):
 # --- Characteristic strain from Sesana et al., (2005), ApJ, 623, 23 ---
 def ComputeCharacteristicStrain( M1, M2, r, tau = LISA_Lifetime, f = f ):
 
-    # --- Initialize array to hold characteristic strains ---
-    hc = empty( len( f ), float )
-    
     # --- Compute chirp mass (text below Eq. (2)) ---
     Mc = ( M1 * M2 )**( 3.0 / 5.0 ) / ( M1 + M2 )**( 1.0 / 5.0 )
 
@@ -86,12 +83,9 @@ def ComputeCharacteristicStrain( M1, M2, r, tau = LISA_Lifetime, f = f ):
     n = 5.0 / ( 96.0 * pi**( 8.0 / 3.0 ) ) \
           * c**5 / ( G * Mc * f )**( 5.0 / 3.0 )
 
-    # --- Check whether or not n < f * tau and compute characteristic strain ---
-    for i in range( len( f ) ):
-        if ( n[i] < f[i] * tau ):
-            hc[i] = h[i] * sqrt( n[i] ) # Eq. (6)
-        else:
-            hc[i] = h[i] * sqrt( f[i] * tau ) # Eq. (7)
+    # --- Check whether or not n < f * tau and compute characteristic strain
+    #     Eq. (6) and Eq. (7) ---
+    hc = where( n < f * tau, h * sqrt( n ), h * sqrt( f * tau ) )
 
     return hc
 
@@ -102,31 +96,32 @@ import matplotlib.pyplot as plt
 # --- Test 1: Sesana et al., (2005), ApJ, 623, 23 ---
 # NOTE: Sesana et al. uses older LISA sensitivity curve, from
 # http://www.srl.caltech.edu/~shane/sensitivity
+from numpy import log10
 fig, ax = plt.subplots()
 
-M1 = [ 1.0e6 * Msun, 1.0e3 * Msun ]
-M2 = [ 0.1 * M1[0], M1[1] ]
-z  = [ 1.0, 7.0 ]
+M1 = [ 1.0e7 * Msun, 1.0e3 * Msun ]
+M2 = [  0.1 * M1[0],     M1[1]    ]
+z  = [     1.0,          7.0      ]
 
-ax.loglog( f, hc_LISA, 'k-' )
+ax.plot( log10( f ), log10( hc_LISA ), 'k-' )
 
-f2005a = linspace( 1.0e-6, 1.0e-3, 400)
-ax.loglog( f2005a, ComputeCharacteristicStrain \
+f2005a = linspace( 1.0e-6, 1.0e-3, 1000)
+ax.plot( log10( f2005a ), log10( ComputeCharacteristicStrain \
                   ( M1[0], M2[0], ComputeComovingDistanceFromRedshift( z[0] ), \
-                    3.0 * year, f2005a ), 'r-', \
+                    3.0 * year, f2005a ) ), 'r-', \
                     label = '$10^{6}-10^{5}\,M_{\odot}$' )
 
-f2005b = linspace( 1.0e-5, 8.0e-1, 400 )
-ax.loglog( f2005b, ComputeCharacteristicStrain \
+f2005b = linspace( 1.0e-5, 8.0e-1, 1000 )
+ax.plot( log10( f2005b ), log10( ComputeCharacteristicStrain \
                   ( M1[1], M2[1], ComputeComovingDistanceFromRedshift( z[1] ), \
-                    3.0 * year, f2005b ), 'g-', \
+                    3.0 * year, f2005b ) ), 'g-', \
                     label = '$10^{3}-10^{3}\,M_{\odot}$' )
 
-ax.set_xlim( 1.0e-6, 1.0e0 )
-ax.set_ylim( 1.0e-25, 2.0e-15 )
+ax.set_xlim( -6.0, 0.0 )
+ax.set_ylim( -22.0, -14.5 )
 
-ax.set_xlabel( 'Frequency [Hz]' )
-ax.set_ylabel( 'Characteristic strain [dimensionless]' )
+ax.set_xlabel( 'log observed frequency [Hz]' )
+ax.set_ylabel( 'log hc' )
 ax.set_title( 'Sesana et al., (2005), ApJ, 623, 23 (Fig. 1)\n(Sesana paper \
 uses older sensitivity curve)' )
 ax.legend()
@@ -134,7 +129,7 @@ plt.show()
 plt.close()
 '''
 
-#'''
+'''
 # --- Test 2: Sesana (2016), PRL, 116, 231102 (GW150914) ---
 fig, ax = plt.subplots()
 
@@ -144,7 +139,7 @@ z  = 0.09
 
 ax.loglog( f, hc_LISA, 'k-' )
 
-f2016 = linspace( 1.0e-2, 1.0e3, 400 )
+f2016 = linspace( 1.0e-2, 1.0e3, 1000 )
 ax.loglog( f2016, ComputeCharacteristicStrain \
                 ( M1, M2, ComputeComovingDistanceFromRedshift( z ), \
                       5.0 * year, f2016 ) )
@@ -157,7 +152,7 @@ ax.set_title( 'GW150914, Sesana (2016), PRL, 116, 231102, Fig. 1' )
 
 plt.show()
 plt.close()
-#'''
+'''
 
 #'''
 # --- Test 3: GOAT Report ---
@@ -170,8 +165,8 @@ z  = 3.0
 
 ax.loglog( f, hc_LISA, 'k-' )
 
-fGOAT = linspace( 1.0e-5, 1.0e0, 400 )
-ax.loglog( f, ComputeCharacteristicStrain \
+fGOAT = linspace( 1.0e-5, 1.0e0, 1000 )
+ax.loglog( fGOAT, ComputeCharacteristicStrain \
                 ( M1, M2, ComputeComovingDistanceFromRedshift( z ), \
                       1.0 * year, fGOAT ) )
 ax.set_xlim( 1.0e-5, 2.0e0 )
