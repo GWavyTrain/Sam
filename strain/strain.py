@@ -92,7 +92,7 @@ def ComputeCharacteristicStrain( M1, M2, r, tau = LISA_Lifetime, f = f ):
 # --- Test characteristic strain calculation ---
 import matplotlib.pyplot as plt
 
-'''
+#'''
 # --- Test 1: Sesana et al., (2005), ApJ, 623, 23 ---
 # NOTE: Sesana et al. uses older LISA sensitivity curve, from
 # http://www.srl.caltech.edu/~shane/sensitivity
@@ -127,9 +127,9 @@ uses older sensitivity curve)' )
 ax.legend()
 plt.show()
 plt.close()
-'''
+#'''
 
-'''
+#'''
 # --- Test 2: Sesana (2016), PRL, 116, 231102 (GW150914) ---
 fig, ax = plt.subplots()
 
@@ -152,7 +152,7 @@ ax.set_title( 'GW150914, Sesana (2016), PRL, 116, 231102, Fig. 1' )
 
 plt.show()
 plt.close()
-'''
+#'''
 
 #'''
 # --- Test 3: GOAT Report ---
