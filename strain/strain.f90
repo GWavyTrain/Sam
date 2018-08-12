@@ -107,7 +107,7 @@ PROGRAM CharacteristicStrainFromBBHmergers
      ! --- Sesana et al., (2005), ApJ, 623, 23, Fig. 2 ---
      MergerID = 120
      M1 = 1.0d5
-     M2 = 0.1 * M1
+     M2 = 0.1d0 * M1
      z  = 1.0d0
      tau = 3.0d0 * 86400.0d0 * 365.25d0 ! --- Lifetime of three years ---
 

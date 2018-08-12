@@ -33,7 +33,6 @@ h      = 0.704
 H0     = h * 100.0 / 3.086e19
 OmegaM = 0.2726
 OmegaL = 0.7274
-OmegaB = 0.0456
 
 # --- Read in LISA data ---
 LISA_data = loadtxt( BasePath + 'LISA_sensitivity.dat' )
@@ -49,7 +48,7 @@ hc_LISA   = sqrt( LISA_data[:,1] * f )
 def ComputeLookbackTimeFromRedshift( z ):
     def LookbackTimeIntegrand( z ):
         return 1.0 / ( ( 1.0 + z ) \
-                       * sqrt( ( OmegaM + OmegaB ) * ( 1.0 + z )**3 + OmegaL ) )
+                       * sqrt( OmegaM * ( 1.0 + z )**3 + OmegaL ) )
 
     return 1.0 / H0 * romberg( LookbackTimeIntegrand, 0.0, z )
 
@@ -58,9 +57,10 @@ def ComputeRedshiftFromLookbackTime( tLb ):
 
 def ComputeComovingDistanceFromRedshift( z ):
     def ComovingDistanceIntegrand( z ):
-        return 1.0 / sqrt( ( OmegaM + OmegaB ) * ( 1.0 + z )**3 + OmegaL )
+        return 1.0 / sqrt( OmegaM * ( 1.0 + z )**3 + OmegaL )
 
     return c / H0 * romberg( ComovingDistanceIntegrand, 0.0, z )
+
 
 # --- Combine above two functions to compute comoving
 #     distance from lookback time ---
@@ -89,6 +89,7 @@ def ComputeCharacteristicStrain( M1, M2, r, tau = LISA_Lifetime, f = f ):
 
     return hc
 
+
 # --- Test characteristic strain calculation ---
 import matplotlib.pyplot as plt
 
@@ -99,7 +100,7 @@ import matplotlib.pyplot as plt
 from numpy import log10
 fig, ax = plt.subplots()
 
-M1 = [ 1.0e7 * Msun, 1.0e3 * Msun ]
+M1 = [ 1.0e6 * Msun, 1.0e3 * Msun ]
 M2 = [  0.1 * M1[0],     M1[1]    ]
 z  = [     1.0,          7.0      ]
 
@@ -118,15 +119,18 @@ ax.plot( log10( f2005b ), log10( ComputeCharacteristicStrain \
                     label = '$10^{3}-10^{3}\,M_{\odot}$' )
 
 ax.set_xlim( -6.0, 0.0 )
-ax.set_ylim( -22.0, -14.5 )
+ax.set_ylim( -25.0, -14.5 )
 
 ax.set_xlabel( 'log observed frequency [Hz]' )
 ax.set_ylabel( 'log hc' )
 ax.set_title( 'Sesana et al., (2005), ApJ, 623, 23 (Fig. 1)\n(Sesana paper \
 uses older sensitivity curve)' )
 ax.legend()
+
+#plt.savefig( '/Users/sam/Desktop/Sesana_etal_2005_ApJ_623_23_Fig1.png' )
 plt.show()
 plt.close()
+#exit()
 #'''
 
 #'''
@@ -150,8 +154,10 @@ ax.set_xlabel( 'Frequency [Hz]' )
 ax.set_ylabel( 'Characteristic strain [dimensionless]' )
 ax.set_title( 'GW150914, Sesana (2016), PRL, 116, 231102, Fig. 1' )
 
+#plt.savefig( '/Users/sam/Desktop/Sesana_2016_PRL_116_231102_GW150914.png' )
 plt.show()
 plt.close()
+#exit()
 #'''
 
 #'''
@@ -176,8 +182,10 @@ ax.set_xlabel( 'Frequency [Hz]' )
 ax.set_ylabel( 'Characteristic strain [dimensionless]' )
 ax.set_title( '$10^{5}-10^{5}\,M_{\odot}$ Binary, GOAT Report, Fig. 2.1 (page 16)' )
 
+#plt.savefig( '/Users/sam/Desktop/GOAT_Report_Fig2.1_pg16.png' )
 plt.show()
 plt.close()
+#exit()
 #'''
 
 
