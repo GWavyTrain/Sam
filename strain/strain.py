@@ -91,5 +91,4 @@ def ComputeCharacteristicStrain( M1, M2, tLb ):
     hc = where( n < f * tau, h * sqrt( n ), h * sqrt( f * tau ) )
 
     return hc
-import matplotlib.pyplot as plt
-#plt.plot( f, ComputeCharacteristicStrain( 1.0e5, 1.0e5, 
+
