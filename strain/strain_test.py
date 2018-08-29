@@ -1,14 +1,24 @@
 from strain import *
 
+tLb_interp = interp1d( z_arr, tLb_arr )
+
 #
 # ===== Beginning of testing =====
 #
 
 # --- Characteristic strain from Sesana et al., (2005), ApJ, 623, 23 ---
-def ComputeCharacteristicStrain( M1, M2, r, z, tau = LISA_Lifetime, f = f ):
+def ComputeCharacteristicStrain( M1, M2, tLb, tau = LISA_Lifetime, f = f ):
+
+    """
+    M1, M2 should be given in solar masses
+    tLb should be given in Gyr
+    """
+
+    z = z_interp( tLb * Gyr )
+    r = r_interp( tLb * Gyr )
 
     # --- Compute chirp mass (text below Eq. (2)) ---
-    Mc = ( M1 * M2 )**( 3.0 / 5.0 ) / ( M1 + M2 )**( 1.0 / 5.0 )
+    Mc = ( M1 * M2 )**( 3.0 / 5.0 ) / ( M1 + M2 )**( 1.0 / 5.0 ) * Msun
 
     # --- Compute pure strain (Eq. (2)) ---
     h = 8.0 * pi**( 2.0 / 3.0 ) / sqrt( 10.0 ) \
@@ -36,22 +46,23 @@ import matplotlib.pyplot as plt
 from numpy import log10
 fig, ax = plt.subplots()
 
-M1 = [ 1.0e6 * Msun, 1.0e3 * Msun ]
-M2 = [  0.1 * M1[0],     M1[1]    ]
-z  = [     1.0,          7.0      ]
+M1 = [ 1.0e6,         1.0e3 ]
+M2 = [  0.1 * M1[0],  M1[1] ]
+z  = [  1.0,           7.0  ]
+tLb = [ tLb_interp( z[0] ) / Gyr, tLb_interp( z[1] ) / Gyr ]
 
 ax.plot( log10( f ), log10( hc_LISA ), 'k-' )
 
 f2005a = linspace( 1.0e-6, 1.0e-3, 1000)
 ax.plot( log10( f2005a ), log10( ComputeCharacteristicStrain \
-                  ( M1[0], M2[0], ComputeComovingDistanceFromRedshift( z[0] ), \
-                    z[0], 3.0 * year, f2005a ) ), 'r-', \
+                  ( M1[0], M2[0], tLb[0], \
+                    3.0 * year, f2005a ) ), 'r-', \
                     label = '$10^{6}-10^{5}\,M_{\odot}$' )
 
 f2005b = linspace( 1.0e-5, 8.0e-1, 1000 )
 ax.plot( log10( f2005b ), log10( ComputeCharacteristicStrain \
-                  ( M1[1], M2[1], ComputeComovingDistanceFromRedshift( z[1] ), \
-                    z[1], 3.0 * year, f2005b ) ), 'g-', \
+                  ( M1[1], M2[1], tLb[1], \
+                    3.0 * year, f2005b ) ), 'g-', \
                     label = '$10^{3}-10^{3}\,M_{\odot}$' )
 
 ax.set_xlim( -6.0, 0.0 )
@@ -73,16 +84,17 @@ plt.close()
 # --- Test 2: Sesana (2016), PRL, 116, 231102 (GW150914) ---
 fig, ax = plt.subplots()
 
-M1 = 36.0 * Msun
-M2 = 29.0 * Msun
-z  = 0.09
+M1  = 36.0
+M2  = 29.0
+z   = 0.09
+tLb = tLb_interp( z ) / Gyr
 
 ax.loglog( f, hc_LISA, 'k-' )
 
 f2016 = linspace( 1.0e-2, 1.0e3, 1000 )
 ax.loglog( f2016, ComputeCharacteristicStrain \
-                ( M1, M2, ComputeComovingDistanceFromRedshift( z ), \
-                      z, 5.0 * year, f2016 ) )
+                ( M1, M2, tLb, \
+                  5.0 * year, f2016 ) )
 ax.set_xlim( 1.0e-3, 3.0e3 )
 ax.set_ylim( 1.0e-23, 1.0e-18 )
 
@@ -101,16 +113,17 @@ plt.close()
 # NOTE: LISA sensitivity curve in GOAT report is different
 fig, ax = plt.subplots()
 
-M1 = 1.0e5 * Msun
-M2 = M1
-z  = 3.0
+M1  = 1.0e5
+M2  = M1
+z   = 3.0
+tLb = tLb_interp( z ) / Gyr
 
 ax.loglog( f, hc_LISA, 'k-' )
 
 fGOAT = linspace( 1.0e-5, 1.0e0, 1000 )
 ax.loglog( fGOAT, ComputeCharacteristicStrain \
-                ( M1, M2, ComputeComovingDistanceFromRedshift( z ), \
-                      z, 1.0 * year, fGOAT ) )
+                ( M1, M2, tLb, \
+                  1.0 * year, fGOAT ) )
 ax.set_xlim( 1.0e-5, 2.0e0 )
 ax.set_ylim( 1.0e-21, 1.0e-16 )
 
