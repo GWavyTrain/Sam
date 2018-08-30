@@ -2,6 +2,13 @@ from strain import *
 
 tLb_interp = interp1d( z_arr, tLb_arr )
 
+# --- Read in LISA data ---
+LISA_data = loadtxt( BasePath + 'LISA_sensitivity.dat' )
+f        = LISA_data[:,0]
+hc_LISA   = sqrt( LISA_data[:,1] * f )
+
+SavePath = '/Users/sam/Desktop/'
+
 #
 # ===== Beginning of testing =====
 #
@@ -74,7 +81,7 @@ ax.set_title( 'Sesana (2005), ApJ, 623, 23 (Fig. 1)\n(Sesana paper \
 uses older sensitivity curve)' )
 ax.legend()
 
-#plt.savefig( '/Users/sam/Desktop/Sesana_2005_ApJ_623_23_Fig1.png' )
+#plt.savefig( SaveFig + 'Sesana_2005_ApJ_623_23_Fig1.png' )
 plt.show()
 plt.close()
 #exit()
@@ -102,7 +109,7 @@ ax.set_xlabel( 'Frequency [Hz]' )
 ax.set_ylabel( 'Characteristic strain [dimensionless]' )
 ax.set_title( 'GW150914, Sesana (2016), PRL, 116, 231102, Fig. 1' )
 
-#plt.savefig( '/Users/sam/Desktop/Sesana_2016_PRL_116_231102_GW150914.png' )
+#plt.savefig( SaveFig + 'Sesana_2016_PRL_116_231102_GW150914.png' )
 plt.show()
 plt.close()
 #exit()
@@ -131,7 +138,7 @@ ax.set_xlabel( 'Frequency [Hz]' )
 ax.set_ylabel( 'Characteristic strain [dimensionless]' )
 ax.set_title( '$10^{5}-10^{5}\,M_{\odot}$ Binary, GOAT Report, Fig. 2.1 (page 16)' )
 
-#plt.savefig( '/Users/sam/Desktop/GOAT_Report_Fig2.1_pg16.png' )
+#plt.savefig( SaveFig + 'GOAT_Report_Fig2.1_pg16.png' )
 plt.show()
 plt.close()
 #exit()

@@ -1,37 +1,44 @@
 #!/usr/local/bin/python3
 
+"""
+Plot characteristic strain from a particular merger
+from Mapelli data
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 
+#BasePath = '/astro1/dunhamsj/'
+BasePath = '/Users/sam/Research/GW/Sam/'
+
 # LISA frequency limits
-xlim = ( 1.0e-5, 2.0 )
-
-# Limits from Sesana, et al., (2005), ApJ, 623, 23
-xlim = ( 1.0e-6, 1.0e0 )
-
+xlim = ( 2.0e-5, 1.0 )
 xC = 10.0**( ( np.log10( xlim[-1] ) + np.log10( xlim[0] ) ) / 2.0 )
 
-# Load in data
-f_LISA, PSD_LISA = np.loadtxt( '../LISA_sensitivity.dat', unpack = True )
-data             = np.loadtxt( 'hc.dat' )
-
+# Load in LISA data
+f_LISA, PSD_LISA = np.loadtxt( \
+                     BasePath + 'LISA_sensitivity.dat', unpack = True )
 # Compute noise amplitude for LISA
 hn_LISA = np.sqrt( PSD_LISA * f_LISA )
 
-Merger = np.argmax(data[:,1])
+Snapshot = 26
+data = np.loadtxt( \
+         BasePath + 'strain/hc_DataFiles/hc_{:d}.dat'.format(Snapshot) )
 
-# Get redshift z and comoving distance r
-z = data[ Merger, 4 ]
-r = data[ Merger, 6 ]
+Merger = 5
+# Get masses
+M1 = data[Merger,0] # [Msun]
+M2 = data[Merger,1] # [Msun]
+
+# Get lookback-time tLb, redshift z and comoving distance r
+tLb = data[Merger,2] # [Gyr]
+z   = data[Merger,3] # [dimensionless]
+r   = data[Merger,4] # [Mpc]
 
 # Get frequencies and strain
-f      = data[ 0,      7 : ]
-hc     = data[ Merger, 7 : ]
-f_ISCO = data[ Merger, 5   ]
-
-# Get masses
-M1 = data[ Merger, 1 ]
-M2 = data[ Merger, 2 ]
+f      = data[0,6:] # [Hz]
+hc     = data[Merger,6:] # [dimensionless]
+f_ISCO = data[Merger,5] # [Hz]
 
 # Plotting
 fig, ax = plt.subplots()
@@ -43,13 +50,13 @@ ylim = ax.get_ylim()
 yC = 10.0**( ( np.log10( ylim[-1] ) + np.log10( ylim[0] ) ) / 2.0 )
 
 ax.text( 1.0e-2 * xC, 1.0e+2 * yC, \
-            '$M_{1} = %.2e\,M_{\odot}, M_{2} = %.2e\,M_{\odot}$' \
-              % ( M1, M2 ) , fontsize = 15 )
+  r'$M_1={:.2f}\,M_\odot, M_2={:.2f}\,M_\odot$'.format(M1,M2), fontsize = 15 )
+
 ax.text( 1.0e-2 * xC, 3.0e+1 * yC, \
-            r'$z = %.2e, D_L \approx %.2e\,Mpc$' \
-              % ( z, r * ( 1.0 + z ) ), fontsize = 15 )
+            r'$z = {:.2e}, D_L \approx {:.2e}\,Mpc$'.format( \
+                                          z, r * ( 1.0 + z ) ), fontsize = 15 )
 ax.text( 1.0e-2 * xC, 1.0e+1 * yC, \
-            '$f_{ISCO}=%.2e\,Hz$' % f_ISCO, fontsize = 15 )
+            r'$f_{:}={:.2e}\,Hz$'.format('{ISCO}',f_ISCO), fontsize = 15 )
 ax.set_xlabel( r'$f\,\left[Hz\right]$' )
 ax.set_ylabel( r'$h_{c}\,\left[dimensionless\right]$' )
 

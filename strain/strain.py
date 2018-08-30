@@ -11,14 +11,22 @@ https://arxiv.org/pdf/1708.05722.pdf
 
 Link to Sesana paper:
 http://iopscience.iop.org/article/10.1086/428492/pdf
+
+Directory structure:
+BasePath/BBHM_DataFiles_Mapelli/
+BasePath/strain/
+BasePath/strain/hc_DataFiles/
 '''
 
-from numpy import pi, sqrt, loadtxt, linspace, where, savetxt, vstack
+from numpy import pi, sqrt, loadtxt, copy, linspace, where, savetxt, vstack, empty, insert
 from sys import exit
 from astropy.cosmology import z_at_value
 from scipy.integrate import romberg
 from scipy.interpolate import interp1d
 from os.path import isfile
+from time import time
+
+ProgStartTime = time()
 
 # --- Define root directory ---
 BasePath = '/Users/sam/Research/GW/Sam/'
@@ -47,8 +55,15 @@ OmegaL = 0.7274
 
 # --- Read in LISA data ---
 LISA_data = loadtxt( BasePath + 'LISA_sensitivity.dat' )
-f         = LISA_data[:,0]
-hc_LISA   = sqrt( LISA_data[:,1] * f )
+ff        = LISA_data[:,0]
+hc_LISA   = sqrt( LISA_data[:,1] * ff )
+
+# Shorten LISA data
+nLISA = 12
+f       = empty( (nLISA), float )
+f[0]    = 2.0e-5
+f[-1]   = 1.0
+f[1:-1] = copy(ff[1::40])
 
 # --- Compute redshift and comoving distance, given lookback time ---
 
@@ -121,7 +136,10 @@ def ComputeCharacteristicStrain( M1, M2, tLb ):
     #     Eq. (6) and Eq. (7) ---
     hc = where( n < f * tau, h * sqrt( n ), h * sqrt( f * tau ) )
 
-    return hc
+    fISCO = c**3 / ( 6.0**(3.0 / 2.0 ) * pi * G ) \
+              / ( ( M1 + M2 ) * Msun ) / ( 1.0 + z )
+
+    return z, r, fISCO, hc
 
 # --- Output directory for characteristic strain files  ---
 OutputDir = BasePath + 'strain/hc_DataFiles/'
@@ -137,16 +155,65 @@ SSmax = 135
 
 SS = SSmin
 
+nParams = 6
 while( SS <= SSmax ):
 
-    File = InputDir + FileName + str( SS ) + '.dat'
+    FileIn = InputDir + FileName + str( SS ) + '.dat'
+    FileOut = OutputDir + 'hc_{:d}.dat'.format(SS)
 
-    if not isfile( File ):
-        continue
+    if isfile( FileIn ):
 
-    M1, M2, tLb = loadtxt( File, unpack = True, usecols = ( 6, 7, 9 )  )
+        LogFileName = OutputDir + 'log_{:d}.txt'.format( SS )
+        with open( LogFileName, 'w' ) as fL:
+            fL.write( '# log_{:d}.txt\n'.format( SS ) )
 
-    hc = [ ComputeCharacteristicStrain( M1[i], M2[i], tLb[i] ) \
-             for i in range( len( M1 ) ) ]
+        LoadStartTime = time()
+        M1, M2, tLb = loadtxt( FileIn, unpack = True, usecols = ( 6, 7, 9 ) )
+        LoadEndTime = time() - LoadStartTime
+
+        with open( LogFileName, 'a' ) as fL:
+            fL.write( \
+              'Time to read in file: {:.3e} s\n'.format( LoadEndTime ) )
+
+        N = len(M1)
+
+        with open( LogFileName, 'a' ) as fL:
+            fL.write( \
+              'Number of mergers:    {:d}\n'.format( N ) )
+
+        hc = empty( ( N+1, nParams + nLISA ), float )
+        hc[0,0:nParams] = 'nan'
+        hc[0,nParams:]  = f
+
+        StrainStartTime = time()
+        for i in range( N ):
+            z, r, fISCO, hc[i+1,nParams:] \
+              = ComputeCharacteristicStrain( M1[i], M2[i], tLb[i] )
+            hc[i+1,0]  = M1[i]
+            hc[i+1,1]  = M2[i]
+            hc[i+1,2]  = tLb[i]
+            hc[i+1,3]  = z
+            hc[i+1,4]  = r / Mpc
+            hc[i+1,5]  = fISCO
+        StrainEndTime = time() - StrainStartTime
+        with open( LogFileName, 'a' ) as fL:
+            fL.write( \
+              'Time to compute hc:   {:.3e} s\n'.format( StrainEndTime ) )
+
+        SaveStartTime = time()
+        savetxt( FileOut, hc, \
+                   header = 'M1 [Msun], M2 [Msun], Lookback-Time [Gyr], \
+Redshift [dimensionless], Comoving Distance [Mpc], fISCO [Hz], \
+Characteristic Strain [dimensionless] ({:d} entries)\n(First row is \
+frequencies)'.format(nLISA) )
+        SaveEndTime = time() - SaveStartTime
+        with open( LogFileName, 'a' ) as fL:
+            fL.write( \
+              'Time to save file:    {:.3e} s\n'.format( SaveEndTime ) )
 
     SS += 1
+
+ProgEndTime = time() - ProgStartTime
+
+with open( OutputDir + 'AA_runtime.txt', 'w' ) as fL:
+    fL.write( 'Total run-time: {:.3e} s'.format( ProgEndTime ) )
