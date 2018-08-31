@@ -18,7 +18,8 @@ BasePath/strain/
 BasePath/strain/hc_DataFiles/
 '''
 
-from numpy import pi, sqrt, loadtxt, copy, linspace, where, savetxt, vstack, empty, insert
+from numpy import pi, sqrt, loadtxt, copy, linspace, where, \
+     savetxt, vstack, empty, insert, inf
 from sys import exit
 from astropy.cosmology import z_at_value
 from scipy.integrate import romberg
@@ -29,6 +30,7 @@ from time import time
 ProgStartTime = time()
 
 # --- Define root directory ---
+#BasePath = '/astro1/dunhamsj/'
 BasePath = '/Users/sam/Research/GW/Sam/'
 
 # --- All physical quantities are in SI units ---
@@ -59,7 +61,7 @@ ff        = LISA_data[:,0]
 hc_LISA   = sqrt( LISA_data[:,1] * ff )
 
 # Shorten LISA data
-nLISA = 12
+nLISA   = 12
 f       = empty( (nLISA), float )
 f[0]    = 2.0e-5
 f[-1]   = 1.0
@@ -155,7 +157,14 @@ SSmax = 135
 
 SS = SSmin
 
-nParams = 6
+nParams = 11
+
+Min_z      = +inf
+Max_z      = -inf
+Min_tLb    = +inf
+Max_tLb    = -inf
+TotMergers = 0
+
 while( SS <= SSmax ):
 
     FileIn = InputDir + FileName + str( SS ) + '.dat'
@@ -168,7 +177,17 @@ while( SS <= SSmax ):
             fL.write( '# log_{:d}.txt\n'.format( SS ) )
 
         LoadStartTime = time()
-        M1, M2, tLb = loadtxt( FileIn, unpack = True, usecols = ( 6, 7, 9 ) )
+        BBHM_Data = loadtxt( FileIn )
+
+        IllustrisID      = BBHM_Data[:,0]
+        InitialMass      = BBHM_Data[:,1]
+        SnapshotRedshift = BBHM_Data[:,2]
+        MergerID         = BBHM_Data[:,5]
+        M1               = BBHM_Data[:,6]
+        M2               = BBHM_Data[:,7]
+        tDelay           = BBHM_Data[:,8]
+        tLb              = BBHM_Data[:,9]
+
         LoadEndTime = time() - LoadStartTime
 
         with open( LogFileName, 'a' ) as fL:
@@ -176,6 +195,7 @@ while( SS <= SSmax ):
               'Time to read in file: {:.3e} s\n'.format( LoadEndTime ) )
 
         N = len(M1)
+        TotMergers += N
 
         with open( LogFileName, 'a' ) as fL:
             fL.write( \
@@ -189,23 +209,50 @@ while( SS <= SSmax ):
         for i in range( N ):
             z, r, fISCO, hc[i+1,nParams:] \
               = ComputeCharacteristicStrain( M1[i], M2[i], tLb[i] )
-            hc[i+1,0]  = M1[i]
-            hc[i+1,1]  = M2[i]
-            hc[i+1,2]  = tLb[i]
-            hc[i+1,3]  = z
-            hc[i+1,4]  = r / Mpc
-            hc[i+1,5]  = fISCO
+            hc[i+1,0]  = IllustrisID[i]
+            hc[i+1,1]  = InitialMass[i]
+            hc[i+1,2]  = SnapshotRedshift[i]
+            hc[i+1,3]  = MergerID[i]
+            hc[i+1,4]  = M1[i]
+            hc[i+1,5]  = M2[i]
+            hc[i+1,6]  = tDelay[i]
+            hc[i+1,7]  = tLb[i]
+            hc[i+1,8]  = z
+            hc[i+1,9]  = r / Mpc
+            hc[i+1,10] = fISCO
         StrainEndTime = time() - StrainStartTime
+
+        Min_tLb = min( Min_tLb, hc[1:,7].min() )
+        Max_tLb = max( Max_tLb, hc[1:,7].max() )
+        Min_z   = min( Min_z,   hc[1:,8].min() )
+        Max_z   = max( Max_z,   hc[1:,8].max() )
+
         with open( LogFileName, 'a' ) as fL:
             fL.write( \
               'Time to compute hc:   {:.3e} s\n'.format( StrainEndTime ) )
-
+            fL.write( '\
+Min lookback-time:    {:.10f}\n\
+Max lookback-time:    {:.10f}\n\
+Min merger redshift:  {:.16e}\n\
+Max merger redshift:  {:.16e}\n'.format( \
+            hc[1:,7].min(), hc[1:,7].max(), hc[1:,8].min(), hc[1:,8].max() ) )
         SaveStartTime = time()
         savetxt( FileOut, hc, \
-                   header = 'M1 [Msun], M2 [Msun], Lookback-Time [Gyr], \
-Redshift [dimensionless], Comoving Distance [Mpc], fISCO [Hz], \
-Characteristic Strain [dimensionless] ({:d} entries)\n(First row is \
-frequencies)'.format(nLISA) )
+                   header = ' hc_{:d}.dat\n\n\
+--- Column names ---\n\
+(0) Illustris particle ID\n\
+(1) Illustris particle initial mass at formation [1e10 Msun/h] (h = 0.704)\n\
+(2) Snapshot redshift [dimensionless]\n\
+(3) Merger ID\n\
+(4) M1 [Msun]\n\
+(5) M2 [Msun]\n\
+(6) Delay-time [Gyr]\n\
+(7) Lookback-time [Gyr]\n\
+(8) Redshift at merge [dimensionless]\n\
+(9) Comoving distance at merge [Mpc]\n\
+(10) fISCO [Hz]\n\
+(11) Characteristic strain [dimensionless] ({:d} entries)\n\
+(First row contains LISA frequencies)'.format(SS, nLISA) )
         SaveEndTime = time() - SaveStartTime
         with open( LogFileName, 'a' ) as fL:
             fL.write( \
@@ -215,5 +262,10 @@ frequencies)'.format(nLISA) )
 
 ProgEndTime = time() - ProgStartTime
 
-with open( OutputDir + 'AA_runtime.txt', 'w' ) as fL:
+with open( OutputDir + 'A_log.txt', 'w' ) as fL:
+    fL.write( 'Total number of mergers: {:d}\n\n'.format( TotMergers ) )
+    fL.write( 'Minimum lookback-time:   {:.10f} Gyr\n'.format( Min_tLb ) )
+    fL.write( 'Maximum lookback-time:   {:.10f} Gyr\n'.format( Max_tLb ) )
+    fL.write( 'Minimum merger redshift: {:.16e}\n'.format( Min_z ) )
+    fL.write( 'Maximum merger redshift: {:.16e}\n\n'.format( Max_z ) )
     fL.write( 'Total run-time: {:.3e} s'.format( ProgEndTime ) )

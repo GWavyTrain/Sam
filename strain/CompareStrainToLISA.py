@@ -27,18 +27,19 @@ data = np.loadtxt( \
 
 Merger = 5
 # Get masses
-M1 = data[Merger,0] # [Msun]
-M2 = data[Merger,1] # [Msun]
+M1 = data[Merger,4] # [Msun]
+M2 = data[Merger,5] # [Msun]
 
 # Get lookback-time tLb, redshift z and comoving distance r
-tLb = data[Merger,2] # [Gyr]
-z   = data[Merger,3] # [dimensionless]
-r   = data[Merger,4] # [Mpc]
+tLb = data[Merger,7] # [Gyr]
+z   = data[Merger,8] # [dimensionless]
+r   = data[Merger,9] # [Mpc]
 
 # Get frequencies and strain
-f      = data[0,6:] # [Hz]
-hc     = data[Merger,6:] # [dimensionless]
-f_ISCO = data[Merger,5] # [Hz]
+nParams = 11
+f      = data[0,nParams:] # [Hz]
+f_ISCO = data[Merger,10] # [Hz]
+hc     = np.where( f < f_ISCO, data[Merger,nParams:], 0.0 ) # [dimensionless]
 
 # Plotting
 fig, ax = plt.subplots()
@@ -62,6 +63,6 @@ ax.set_ylabel( r'$h_{c}\,\left[dimensionless\right]$' )
 
 ax.set_xlim( xlim )
 
-#plt.savefig( 'CompareStrainToLISA.png' )
+#plt.savefig( BasePath + 'CompareStrainToLISA.png' )
 plt.show()
 
