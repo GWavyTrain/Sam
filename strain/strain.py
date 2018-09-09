@@ -6,13 +6,18 @@ a set of binary black holes for use with Mapelli data
 using formulae for the characteristic strain from
 Sesana et al., (2005), ApJ, 623, 23.
 
+If the file doesn't exist, the program first creates
+a high-resolution array (resolution is defined by the parameter Nz)
+containing redshift, lookback-time, and comoving distance
+called 'z_tLb_r.dat'
+
 Link to Mapelli paper (arXiv eprint):
 https://arxiv.org/pdf/1708.05722.pdf
 
 Link to Sesana paper:
 http://iopscience.iop.org/article/10.1086/428492/pdf
 
-Directory structure:
+Directory structure (user defines BasePath directory):
 BasePath/BBHM_DataFiles_Mapelli/
 BasePath/strain/
 BasePath/strain/hc_DataFiles/
@@ -21,7 +26,6 @@ BasePath/strain/hc_DataFiles/
 from numpy import pi, sqrt, loadtxt, copy, linspace, where, \
      savetxt, vstack, empty, insert, inf
 from sys import exit
-from astropy.cosmology import z_at_value
 from scipy.integrate import romberg
 from scipy.interpolate import interp1d
 from os.path import isfile
@@ -75,7 +79,7 @@ if not isfile( BasePath + 'strain/z_tLb_r.dat' ):
 and comoving distance: z_tLb_r.dat' )
 
     # Create high-resolution array of redshifts
-    Nz = 100
+    Nz = 100000
     z_arr = linspace( 0.0, 20.0, Nz )
 
     # Compute lookback-times for redshift array
@@ -114,8 +118,8 @@ r_interp = interp1d( tLb_arr, r_arr, kind = 'linear', \
 def ComputeCharacteristicStrain( M1, M2, tLb ):
 
     """
-    M1, M2 should be given in solar masses
-    tLb should be given in Gyr
+    M1, M2 should be in solar masses
+    tLb should be in Gyr
     """
 
     z = z_interp( tLb * Gyr )
@@ -143,20 +147,21 @@ def ComputeCharacteristicStrain( M1, M2, tLb ):
 
     return z, r, fISCO, hc
 
-# --- Output directory for characteristic strain files  ---
+# --- Output directory for characteristic strain files ---
 OutputDir = BasePath + 'strain/hc_DataFiles/'
 
-# --- Mapelli data file input directory ---
+# --- Input directory for Mapelli data file ---
 InputDir = BasePath + 'BBHM_DataFiles_Mapelli/'
 
 # --- Data file ---
 FileName = 'time_BHillustris1_'
 
-SSmin = 26
+SSmin = 56
 SSmax = 135
 
 SS = SSmin
 
+# Number of parameters before strains to print to file
 nParams = 11
 
 Min_z      = +inf
@@ -192,7 +197,7 @@ while( SS <= SSmax ):
 
         with open( LogFileName, 'a' ) as fL:
             fL.write( \
-              'Time to read in file: {:.3e} s\n'.format( LoadEndTime ) )
+              'Time to read in file: {:.7e} s\n'.format( LoadEndTime ) )
 
         N = len(M1)
         TotMergers += N
@@ -229,10 +234,10 @@ while( SS <= SSmax ):
 
         with open( LogFileName, 'a' ) as fL:
             fL.write( \
-              'Time to compute hc:   {:.3e} s\n'.format( StrainEndTime ) )
+              'Time to compute hc:   {:.7e} s\n'.format( StrainEndTime ) )
             fL.write( '\
-Min lookback-time:    {:.10f}\n\
-Max lookback-time:    {:.10f}\n\
+Min lookback-time:    {:.10f} Gyr\n\
+Max lookback-time:    {:.10f} Gyr\n\
 Min merger redshift:  {:.16e}\n\
 Max merger redshift:  {:.16e}\n'.format( \
             hc[1:,7].min(), hc[1:,7].max(), hc[1:,8].min(), hc[1:,8].max() ) )
@@ -256,7 +261,7 @@ Max merger redshift:  {:.16e}\n'.format( \
         SaveEndTime = time() - SaveStartTime
         with open( LogFileName, 'a' ) as fL:
             fL.write( \
-              'Time to save file:    {:.3e} s\n'.format( SaveEndTime ) )
+              'Time to save file:    {:.7e} s\n'.format( SaveEndTime ) )
 
     SS += 1
 
