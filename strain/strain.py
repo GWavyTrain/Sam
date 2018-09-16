@@ -156,8 +156,8 @@ InputDir = BasePath + 'BBHM_DataFiles_Mapelli/'
 # --- Data file ---
 FileName = 'time_BHillustris1_'
 
-SSmin = 56
-SSmax = 135
+SSmin = 26
+SSmax = 27
 
 SS = SSmin
 

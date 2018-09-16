@@ -1,9 +1,9 @@
 # log_26.txt
-Time to read in file: 5.280e-02 s
+Time to read in file: 4.6967030e-02 s
 Number of mergers:    10
-Time to compute hc:   2.381e-03 s
-Min lookback-time:    3.6751614453
-Max lookback-time:    13.5085614453
+Time to compute hc:   2.6338100e-03 s
+Min lookback-time:    3.6751614453 Gyr
+Max lookback-time:    13.5085614453 Gyr
 Min merger redshift:  3.2812696197721114e-01
 Max merger redshift:  1.6412934479857277e+01
-Time to save file:    1.247e-03 s
+Time to save file:    1.2288094e-03 s
