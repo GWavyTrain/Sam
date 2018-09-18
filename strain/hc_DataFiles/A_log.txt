@@ -1,8 +1,0 @@
-Total number of mergers: 20
-
-Minimum lookback-time:   3.6751614453 Gyr
-Maximum lookback-time:   13.5085614453 Gyr
-Minimum merger redshift: 3.2812696197721114e-01
-Maximum merger redshift: 1.6412934479857277e+01
-
-Total run-time: 7.249e-01 s

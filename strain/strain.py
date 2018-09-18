@@ -23,19 +23,51 @@ BasePath/strain/
 BasePath/strain/hc_DataFiles/
 '''
 
+# --- Import Python functions ---
 from numpy import pi, sqrt, loadtxt, copy, linspace, where, \
-     savetxt, vstack, empty, insert, inf
+     savetxt, vstack, empty, insert, inf, nan
 from sys import exit
-from scipy.integrate import romberg
 from scipy.interpolate import interp1d
-from os.path import isfile
+from scipy.integrate import romberg
 from time import time
+import os
 
 ProgStartTime = time()
 
-# --- Define root directory ---
+# --- Define directories ---
+
+# Root directory
 #BasePath = '/astro1/dunhamsj/'
 BasePath = '/Users/sam/Research/GW/Sam/'
+
+# Directory to strain files
+StrainPath = BasePath + 'strain/'
+
+# Input directory for Mapelli data file
+InputDir = BasePath + 'BBHM_DataFiles_Mapelli/'
+
+# Input data file name
+FileName = 'time_BHillustris1_'
+
+# Output directory for characteristic strain files
+OutputDir = StrainPath + 'hc_DataFiles/'
+
+# Header for strain output file
+StrainFileHeader = ' hc_{:d}.dat\n\n\
+--- Column names ---\n\
+(0) Illustris particle ID\n\
+(1) Illustris particle initial mass at formation [1e10 Msun/h] (h = 0.704)\n\
+(2) Snapshot redshift [dimensionless]\n\
+(3) Merger ID\n\
+(4) M1 [Msun]\n\
+(5) M2 [Msun]\n\
+(6) Delay-time [Gyr]\n\
+(7) Lookback-time [Gyr]\n\
+(8) Redshift at merge [dimensionless]\n\
+(9) Comoving distance at merge [Mpc]\n\
+(10) fISCO [Hz]\n\
+(11) Characteristic strain [dimensionless] ({:d} entries)\n\
+(First row contains LISA frequencies)'
 
 # --- All physical quantities are in SI units ---
 
@@ -47,10 +79,6 @@ Gyr  = 1.0e9 * year
 Mpc  = 3.086e22
 Msun = 2.0e30
 
-# --- Problem-specific constants ---
-LISA_Lifetime = 4.0 * year
-tau = LISA_Lifetime
-
 # --- Cosmological parameters from Mapelli et al., (2017), MNRAS, 472, 2422
 #     (WMAP-9, Hinshaw et al., (2013), ApJS, 208, 19) ---
 # NOTE: Hinshaw et al. values do NOT agree with those quoted in Mapelli
@@ -58,6 +86,10 @@ h      = 0.704
 H0     = h * 100.0 / 3.086e19
 OmegaM = 0.2726
 OmegaL = 0.7274
+
+# --- Problem-specific constants ---
+LISA_Lifetime = 4.0 * year
+tau = LISA_Lifetime
 
 # --- Read in LISA data ---
 LISA_data = loadtxt( BasePath + 'LISA_sensitivity.dat' )
@@ -72,14 +104,13 @@ f[-1]   = 1.0
 f[1:-1] = copy(ff[1::40])
 
 # --- Compute redshift and comoving distance, given lookback time ---
-
-if not isfile( BasePath + 'strain/z_tLb_r.dat' ):
+def CreateHighResArray():
 
     print( 'Creating high-resolution datafile with redshift, lookback-time, \
 and comoving distance: z_tLb_r.dat' )
 
     # Create high-resolution array of redshifts
-    Nz = 100000
+    Nz = int( 1.0e2 )
     z_arr = linspace( 0.0, 20.0, Nz )
 
     # Compute lookback-times for redshift array
@@ -106,9 +137,11 @@ and comoving distance: z_tLb_r.dat' )
     savetxt( 'z_tLb_r.dat', vstack( ( z_arr, tLb_arr, r_arr ) ), \
                header = 'z_tLb_r.dat; each row has {:d} entries'.format(Nz) )
 
+if not os.path.isfile( StrainPath + 'z_tLb_r.dat' ):
+    CreateHighResArray()
 
 # Interpolate lookback-time to get redshift and comoving distance
-z_arr, tLb_arr, r_arr = loadtxt( 'z_tLb_r.dat' )
+z_arr, tLb_arr, r_arr = loadtxt( StrainPath + 'z_tLb_r.dat' )
 z_interp = interp1d( tLb_arr, z_arr, kind = 'linear', \
                        fill_value = 'extrapolate' )
 r_interp = interp1d( tLb_arr, r_arr, kind = 'linear', \
@@ -147,130 +180,120 @@ def ComputeCharacteristicStrain( M1, M2, tLb ):
 
     return z, r, fISCO, hc
 
-# --- Output directory for characteristic strain files ---
-OutputDir = BasePath + 'strain/hc_DataFiles/'
 
-# --- Input directory for Mapelli data file ---
-InputDir = BasePath + 'BBHM_DataFiles_Mapelli/'
-
-# --- Data file ---
-FileName = 'time_BHillustris1_'
-
+# --- Min/max snapshot for which to compute characteristic strains ---
 SSmin = 26
-SSmax = 27
+SSmax = 135
 
-SS = SSmin
-
-# Number of parameters before strains to print to file
+# --- Number of parameters before strains to print to file ---
 nParams = 11
 
-Min_z      = +inf
-Max_z      = -inf
-Min_tLb    = +inf
-Max_tLb    = -inf
+# --- Initialize global min/max values ---
+LogFile = StrainPath + 'hc_LogFile.dat'
+LogFileFMT = '{:d} {:.16e} {:d} {:.16e} {:.16e} {:.16e} {:.16e} {:.16e} \
+{:.16e} {:.16e} {:.16e} {:.16e} {:.16e} {:.16e} {:.16e}\n'
+
+zSnapshotMinG = tDelayMinG = tLbMinG = zMergeMinG = rMinG = +inf
+zSnapshotMaxG = tDelayMaxG = tLbMaxG = zMergeMaxG = rMaxG = -inf
 TotMergers = 0
 
-while( SS <= SSmax ):
+with open( LogFile, 'w' ) as fL:
+    fL.write( '# Log file\n' )
+    fL.write( \
+      '# Snapshot, time to read in file [s], nMergers, time to compute hc [s], \
+time to save file, zSnapshot Min/Max, tDelay Min/Max [Gyr], tLb Min/Max [Gyr], \
+zMerge Min/Max, r Min/Max [Mpc]\n' )
 
-    FileIn = InputDir + FileName + str( SS ) + '.dat'
+for SS in range( SSmin, SSmax+1 ):
+    
+    FileIn  = InputDir + FileName + str( SS ) + '.dat'
     FileOut = OutputDir + 'hc_{:d}.dat'.format(SS)
 
-    if isfile( FileIn ):
+    if not os.path.isfile( FileIn ): continue
 
-        LogFileName = OutputDir + 'log_{:d}.txt'.format( SS )
-        with open( LogFileName, 'w' ) as fL:
-            fL.write( '# log_{:d}.txt\n'.format( SS ) )
+    LoadStartTime = time()
+    BBHM_Data = loadtxt( FileIn )
+    LoadEndTime = time() - LoadStartTime
 
-        LoadStartTime = time()
-        BBHM_Data = loadtxt( FileIn )
+    IllustrisID      = BBHM_Data[:,0]
+    InitialMass      = BBHM_Data[:,1]
+    SnapshotRedshift = BBHM_Data[:,2]
+    MergerID         = BBHM_Data[:,5]
+    M1               = BBHM_Data[:,6]
+    M2               = BBHM_Data[:,7]
+    tDelay           = BBHM_Data[:,8]
+    tLb              = BBHM_Data[:,9]
 
-        IllustrisID      = BBHM_Data[:,0]
-        InitialMass      = BBHM_Data[:,1]
-        SnapshotRedshift = BBHM_Data[:,2]
-        MergerID         = BBHM_Data[:,5]
-        M1               = BBHM_Data[:,6]
-        M2               = BBHM_Data[:,7]
-        tDelay           = BBHM_Data[:,8]
-        tLb              = BBHM_Data[:,9]
+    N = len(M1)
+    TotMergers += N
 
-        LoadEndTime = time() - LoadStartTime
+    hc = empty( ( N+1, nParams + nLISA ), float )
+    hc[0,0:nParams] = 'nan'
+    hc[0,nParams:]  = f
 
-        with open( LogFileName, 'a' ) as fL:
-            fL.write( \
-              'Time to read in file: {:.7e} s\n'.format( LoadEndTime ) )
+    StrainStartTime = time()
+    for i in range( N ):
+        z, r, fISCO, hc[i+1,nParams:] \
+          = ComputeCharacteristicStrain( M1[i], M2[i], tLb[i] )
+        hc[i+1,0]  = IllustrisID[i]
+        hc[i+1,1]  = InitialMass[i]
+        hc[i+1,2]  = SnapshotRedshift[i]
+        hc[i+1,3]  = MergerID[i]
+        hc[i+1,4]  = M1[i]
+        hc[i+1,5]  = M2[i]
+        hc[i+1,6]  = tDelay[i]
+        hc[i+1,7]  = tLb[i]
+        hc[i+1,8]  = z
+        hc[i+1,9]  = r / Mpc
+        hc[i+1,10] = fISCO
+    StrainEndTime = time() - StrainStartTime
 
-        N = len(M1)
-        TotMergers += N
+    SaveStartTime = time()
+    savetxt( FileOut, hc, header = StrainFileHeader.format(SS, nLISA) )
+    SaveEndTime = time() - SaveStartTime
+    LoadEndTime, N, StrainEndTime, SaveEndTime
 
-        with open( LogFileName, 'a' ) as fL:
-            fL.write( \
-              'Number of mergers:    {:d}\n'.format( N ) )
+    # --- Local min/max ---
+    zSnapshotMin = tDelayMin = tLbMin = zMergeMin = rMin = +inf
+    zSnapshotMax = tDelayMax = tLbMax = zMergeMax = rMax = -inf
 
-        hc = empty( ( N+1, nParams + nLISA ), float )
-        hc[0,0:nParams] = 'nan'
-        hc[0,nParams:]  = f
+    zSnapshotMin = min( zSnapshotMin, hc[i+1,2].min() )
+    zSnapshotMax = max( zSnapshotMax, hc[i+1,2].max() )
+    tDelayMin    = min( tDelayMin,    hc[i+1,6].min() )
+    tDelayMax    = max( tDelayMax,    hc[i+1,6].max() )
+    tLbMin       = min( tLbMin,       hc[i+1,7].min() )
+    tLbMax       = max( tLbMax,       hc[i+1,7].max() )
+    zMergeMin    = min( zMergeMin,    hc[i+1,8].min() )
+    zMergeMax    = max( zMergeMax,    hc[i+1,8].max() )
+    rMin         = min( rMin,         hc[i+1,9].min() )
+    rMax         = max( rMax,         hc[i+1,9].max() )
 
-        StrainStartTime = time()
-        for i in range( N ):
-            z, r, fISCO, hc[i+1,nParams:] \
-              = ComputeCharacteristicStrain( M1[i], M2[i], tLb[i] )
-            hc[i+1,0]  = IllustrisID[i]
-            hc[i+1,1]  = InitialMass[i]
-            hc[i+1,2]  = SnapshotRedshift[i]
-            hc[i+1,3]  = MergerID[i]
-            hc[i+1,4]  = M1[i]
-            hc[i+1,5]  = M2[i]
-            hc[i+1,6]  = tDelay[i]
-            hc[i+1,7]  = tLb[i]
-            hc[i+1,8]  = z
-            hc[i+1,9]  = r / Mpc
-            hc[i+1,10] = fISCO
-        StrainEndTime = time() - StrainStartTime
+    with open( LogFile, 'a' ) as fL:
+        fL.write( LogFileFMT.format( \
+          SS, LoadEndTime, N, StrainEndTime, SaveEndTime, \
+          zSnapshotMin, zSnapshotMax, tDelayMin, tDelayMax, tLbMin, \
+          tLbMax, zMergeMin, zMergeMax, rMin, rMax ) )
 
-        Min_tLb = min( Min_tLb, hc[1:,7].min() )
-        Max_tLb = max( Max_tLb, hc[1:,7].max() )
-        Min_z   = min( Min_z,   hc[1:,8].min() )
-        Max_z   = max( Max_z,   hc[1:,8].max() )
-
-        with open( LogFileName, 'a' ) as fL:
-            fL.write( \
-              'Time to compute hc:   {:.7e} s\n'.format( StrainEndTime ) )
-            fL.write( '\
-Min lookback-time:    {:.10f} Gyr\n\
-Max lookback-time:    {:.10f} Gyr\n\
-Min merger redshift:  {:.16e}\n\
-Max merger redshift:  {:.16e}\n'.format( \
-            hc[1:,7].min(), hc[1:,7].max(), hc[1:,8].min(), hc[1:,8].max() ) )
-        SaveStartTime = time()
-        savetxt( FileOut, hc, \
-                   header = ' hc_{:d}.dat\n\n\
---- Column names ---\n\
-(0) Illustris particle ID\n\
-(1) Illustris particle initial mass at formation [1e10 Msun/h] (h = 0.704)\n\
-(2) Snapshot redshift [dimensionless]\n\
-(3) Merger ID\n\
-(4) M1 [Msun]\n\
-(5) M2 [Msun]\n\
-(6) Delay-time [Gyr]\n\
-(7) Lookback-time [Gyr]\n\
-(8) Redshift at merge [dimensionless]\n\
-(9) Comoving distance at merge [Mpc]\n\
-(10) fISCO [Hz]\n\
-(11) Characteristic strain [dimensionless] ({:d} entries)\n\
-(First row contains LISA frequencies)'.format(SS, nLISA) )
-        SaveEndTime = time() - SaveStartTime
-        with open( LogFileName, 'a' ) as fL:
-            fL.write( \
-              'Time to save file:    {:.7e} s\n'.format( SaveEndTime ) )
-
-    SS += 1
+    zSnapshotMinG = min( zSnapshotMin, zSnapshotMinG )
+    zSnapshotMaxG = max( zSnapshotMax, zSnapshotMaxG )
+    tDelayMinG    = min( tDelayMin,    tDelayMinG    )
+    tDelayMaxG    = max( tDelayMax,    tDelayMaxG    )
+    tLbMinG       = min( tLbMin,       tLbMinG       )
+    tLbMaxG       = max( tLbMax,       tLbMaxG       )
+    zMergeMinG    = min( zMergeMin,    zMergeMinG    )
+    zMergeMaxG    = max( zMergeMax,    zMergeMaxG    )
+    rMinG         = min( rMin,         rMinG         )
+    rMaxG         = max( rMax,         rMaxG         )
 
 ProgEndTime = time() - ProgStartTime
 
-with open( OutputDir + 'A_log.txt', 'w' ) as fL:
-    fL.write( 'Total number of mergers: {:d}\n\n'.format( TotMergers ) )
-    fL.write( 'Minimum lookback-time:   {:.10f} Gyr\n'.format( Min_tLb ) )
-    fL.write( 'Maximum lookback-time:   {:.10f} Gyr\n'.format( Max_tLb ) )
-    fL.write( 'Minimum merger redshift: {:.16e}\n'.format( Min_z ) )
-    fL.write( 'Maximum merger redshift: {:.16e}\n\n'.format( Max_z ) )
-    fL.write( 'Total run-time: {:.3e} s'.format( ProgEndTime ) )
+with open( LogFile, 'a' ) as fL:
+    fL.write( '\n' )
+    fL.write( LogFileFMT.format( \
+      999, nan, TotMergers, nan, nan, \
+      zSnapshotMinG, zSnapshotMaxG, tDelayMinG, tDelayMaxG, tLbMinG, \
+      tLbMaxG, zMergeMinG, zMergeMaxG, rMinG, rMaxG ) )
+    fL.write( '# Total run-time: {:.16e} s\n'.format(ProgEndTime) )
+
+os.system( 'rm -f *.pyc' )
+os.system( 'rm -rf __pycache__/' )

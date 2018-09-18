@@ -8,8 +8,8 @@ from Mapelli data
 import numpy as np
 import matplotlib.pyplot as plt
 
-#BasePath = '/astro1/dunhamsj/'
-BasePath = '/Users/sam/Research/GW/Sam/'
+BasePath = '/astro1/dunhamsj/'
+#BasePath = '/Users/sam/Research/GW/Sam/'
 
 # LISA frequency limits
 xlim = ( 2.0e-5, 1.0 )
@@ -21,7 +21,7 @@ f_LISA, PSD_LISA = np.loadtxt( \
 # Compute noise amplitude for LISA
 hn_LISA = np.sqrt( PSD_LISA * f_LISA )
 
-Snapshot = 26
+Snapshot = 130
 data = np.loadtxt( \
          BasePath + 'strain/hc_DataFiles/hc_{:d}.dat'.format(Snapshot) )
 
@@ -63,6 +63,6 @@ ax.set_ylabel( r'$h_{c}\,\left[dimensionless\right]$' )
 
 ax.set_xlim( xlim )
 
-#plt.savefig( BasePath + 'CompareStrainToLISA.png' )
+#plt.savefig( BasePath + 'strain/CompareStrainToLISA_{:d}.eps'.format(Snapshot) )
 plt.show()
 
