@@ -120,22 +120,31 @@ and comoving distance: z_tLb_r.dat' )
         return 1.0 / H0 * romberg( LookbackTimeIntegrand, 0.0, z, \
                                      rtol = 1.0e-8 )
 
-    tLb_arr = [ ComputeLookbackTimeFromRedshift( z ) for z in z_arr ]
-
-    # Interpolate redshift array as a function of lookback-time
-    z_interp = interp1d( tLb_arr, z_arr, kind = 'linear' )
-
     # Compute comoving distances for redshift array
     def ComovingDistanceIntegrand( z ):
         return 1.0 / sqrt( OmegaM * ( 1.0 + z )**3 + OmegaL )
     def ComputeComovingDistanceFromRedshift( z ):
         return c / H0 * romberg( ComovingDistanceIntegrand, 0.0, z, \
                                    rtol = 1.0e-8 )
-    r_arr = [ ComputeComovingDistanceFromRedshift( z ) for z in z_arr ]
 
+    tLb_arr = empty( (Nz), float )
+    r_arr   = empty( (Nz), float )
 
-    savetxt( 'z_tLb_r.dat', vstack( ( z_arr, tLb_arr, r_arr ) ), \
-               header = 'z_tLb_r.dat; each row has {:d} entries'.format(Nz) )
+    with open( StrainPath + 'HighRes_Log.txt', 'w' ) as fL:
+        fL.write( 'HighRes_Log.txt\n' )
+
+    for i in range( Nz ):
+        if ( i % 1000 == 0 ):
+            with open( StrainPath + 'HighRes_Log.txt', 'a' ) as fL:
+                fL.write( '{:}\n'.format(i) )
+        tLb_arr[i] = ComputeLookbackTimeFromRedshift    ( z_arr[i] )
+        r_arr  [i] = ComputeComovingDistanceFromRedshift( z_arr[i] )
+
+    savetxt( StrainPath + 'z_tLb_r.dat', vstack( ( z_arr, tLb_arr, r_arr ) ), \
+               header = \
+'z_tLb_r.dat; each row has {:d} entries\n\
+Redshift\nLookback-Time [s]\n\
+Comoving Distance [m]'.format(Nz) )
 
 if not os.path.isfile( StrainPath + 'z_tLb_r.dat' ):
     CreateHighResArray()
@@ -201,8 +210,8 @@ with open( LogFile, 'w' ) as fL:
     fL.write( '# Log file\n' )
     fL.write( \
       '# Snapshot, time to read in file [s], nMergers, time to compute hc [s], \
-time to save file, zSnapshot Min/Max, tDelay Min/Max [Gyr], tLb Min/Max [Gyr], \
-zMerge Min/Max, r Min/Max [Mpc]\n' )
+time to save file [s], zSnapshot Min/Max, tDelay Min/Max [Gyr], \
+tLb Min/Max [Gyr], zMerge Min/Max, r Min/Max [Mpc]\n' )
 
 for SS in range( SSmin, SSmax+1 ):
     
@@ -257,16 +266,16 @@ for SS in range( SSmin, SSmax+1 ):
     zSnapshotMin = tDelayMin = tLbMin = zMergeMin = rMin = +inf
     zSnapshotMax = tDelayMax = tLbMax = zMergeMax = rMax = -inf
 
-    zSnapshotMin = min( zSnapshotMin, hc[i+1,2].min() )
-    zSnapshotMax = max( zSnapshotMax, hc[i+1,2].max() )
-    tDelayMin    = min( tDelayMin,    hc[i+1,6].min() )
-    tDelayMax    = max( tDelayMax,    hc[i+1,6].max() )
-    tLbMin       = min( tLbMin,       hc[i+1,7].min() )
-    tLbMax       = max( tLbMax,       hc[i+1,7].max() )
-    zMergeMin    = min( zMergeMin,    hc[i+1,8].min() )
-    zMergeMax    = max( zMergeMax,    hc[i+1,8].max() )
-    rMin         = min( rMin,         hc[i+1,9].min() )
-    rMax         = max( rMax,         hc[i+1,9].max() )
+    zSnapshotMin = min( zSnapshotMin, hc[1:,2].min() )
+    zSnapshotMax = max( zSnapshotMax, hc[1:,2].max() )
+    tDelayMin    = min( tDelayMin,    hc[1:,6].min() )
+    tDelayMax    = max( tDelayMax,    hc[1:,6].max() )
+    tLbMin       = min( tLbMin,       hc[1:,7].min() )
+    tLbMax       = max( tLbMax,       hc[1:,7].max() )
+    zMergeMin    = min( zMergeMin,    hc[1:,8].min() )
+    zMergeMax    = max( zMergeMax,    hc[1:,8].max() )
+    rMin         = min( rMin,         hc[1:,9].min() )
+    rMax         = max( rMax,         hc[1:,9].max() )
 
     with open( LogFile, 'a' ) as fL:
         fL.write( LogFileFMT.format( \

@@ -1,0 +1,2 @@
+HighRes_Log.txt
+0
