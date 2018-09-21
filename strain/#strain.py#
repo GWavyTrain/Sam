@@ -263,7 +263,6 @@ for SS in range( SSmin, SSmax+1 ):
     SaveStartTime = time()
     savetxt( FileOut, hc, header = StrainFileHeader.format(SS, nLISA) )
     SaveEndTime = time() - SaveStartTime
-    LoadEndTime, N, StrainEndTime, SaveEndTime
 
     # --- Local min/max ---
     zSnapshotMin = tDelayMin = tLbMin = zMergeMin = rMin = McMin = +inf
