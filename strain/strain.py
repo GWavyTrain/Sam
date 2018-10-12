@@ -115,7 +115,7 @@ def CreateHighResArray():
 and comoving distance: z_tLb_r.dat' )
 
     # Create high-resolution array of redshifts
-    Nz = int( 1.0e2 )
+    Nz = int( 1.0e7 )
     z_arr = linspace( 0.0, 20.0, Nz )
 
     # Compute lookback-times for redshift array
@@ -208,11 +208,18 @@ TotMergers = 0
 
 with open( LogFile, 'w' ) as fL:
     fL.write( '# Log file\n' )
-    fL.write( \
-      '# (0) Snapshot, (1) time to read in file [s], (2) nMergers, \
-(3) time to compute hc [s], (4) time to save file [s], \
-(5/6) zSnapshot Min/Max, (7/8) tDelay Min/Max [Gyr], (9/10) tLb Min/Max [Gyr], \
-(11/12) zMerge Min/Max, (13/14) r Min/Max [Mpc], (15/16) Mc Min/Max [Msun]\n' )
+    fL.write( '\
+# 0 Snapshot\n\
+# 1 time to read in file [s]\n\
+# 2 nMergers\n\
+# 3 time to compute hc [s]\n\
+# 4 time to save file [s]\n\
+# 5/6 zSnapshot Min/Max\n\
+# 7/8 tDelay Min/Max [Gyr]\n\
+# 9/10 tLb Min/Max [Gyr]\n\
+# 11/12 zMerge Min/Max\n\
+# 13/14 r Min/Max [Mpc]\n\
+# 15/16 Mc Min/Max [Msun]\n' )
 
 for SS in range( SSmin, SSmax+1 ):
     
@@ -301,6 +308,8 @@ for SS in range( SSmin, SSmax+1 ):
     rMaxG         = max( rMax,         rMaxG         )
     McMinG        = min( McMin,        McMinG        )
     McMaxG        = max( McMax,        McMaxG        )
+
+    del hc
 
 ProgEndTime = time() - ProgStartTime
 
