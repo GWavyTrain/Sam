@@ -9,14 +9,14 @@ import matplotlib.pyplot as plt
 from os.path import isfile
 
 # --- Define paths to files ---
-#BasePath = '/astro1/dunhamsj/'
-BasePath = '/Users/sam/Research/GW/Sam/'
+#BasePath   = '/astro1/dunhamsj/'
+BasePath   = '/Users/sam/Research/GW/Sam/'
 StrainPath = BasePath + 'strain/'
+hcFilePath = StrainPath + 'hc_DataFiles/'
 
 # --- Define files ---
-LogFile = StrainPath + 'hc_LogFile.dat'
-hcFilePath  = StrainPath + 'hc_DataFiles/'
-BinnedData = BasePath + 'BinnedData_tLb.dat'
+LogFile    = StrainPath + 'hc_LogFile.dat'
+BinnedData = BasePath + 'MergerRateDensity/BinnedData_tLb.dat'
 
 # --- Read in log data ---
 LogData = np.loadtxt( LogFile )
@@ -41,9 +41,9 @@ print( 'nBins = {:d}'.format(nBins) )
 # --- Read in data files and isolate lookback-time column ---
 if not isfile( BinnedData ):
     with open( BinnedData, 'w' ) as f:
-        f.write('# Mergers binned by lookback-time\n')
+        f.write('# Mergers binned by lookback-time in bins of 10 Myr\n')
     SSMin = 26
-    SSMax = 27
+    SSMax = 135
     for SS in range( SSMin, SSMax+1 ):
         hcFile = hcFilePath +  'hc_{:}.dat'.format(SS)
         if not isfile( hcFile ): continue
@@ -60,7 +60,7 @@ counts = np.sum( CountData, axis = 0 )
 
 # --- Plotting ---
 fig, ax = plt.subplots()
-ax.step( Bins, counts / (10 * Myr) )
+ax.step( Bins, counts / (10 * Myr), 'k' )
 ax.set_xlabel( r'$Lookback-Time\ \left[Gyr\right]$' )
 ax.set_ylabel( r'$dN/dt$' )
 ax.set_yscale('log')
