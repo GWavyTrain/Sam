@@ -38,7 +38,7 @@ ProgStartTime = time()
 
 # Root directory
 #BasePath = '/astro1/dunhamsj/'
-BasePath = '/Users/sam/Research/GW/Sam/'
+BasePath = '/Users/dunhamsj/Research/GW/Sam/'
 
 # Directory to strain files
 StrainPath = BasePath + 'strain/'

@@ -10,7 +10,7 @@ from os.path import isfile
 
 # --- Define paths to files ---
 #BasePath   = '/astro1/dunhamsj/'
-BasePath   = '/Users/sam/Research/GW/Sam/'
+BasePath   = '/Users/dunhamsj/Research/GW/Sam/'
 StrainPath = BasePath + 'strain/'
 hcFilePath = StrainPath + 'hc_DataFiles/'
 

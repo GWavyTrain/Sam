@@ -7,7 +7,7 @@ LISA_data = loadtxt( BasePath + 'LISA_sensitivity.dat' )
 f        = LISA_data[:,0]
 hc_LISA   = sqrt( LISA_data[:,1] * f )
 
-SavePath = '/Users/sam/Desktop/'
+SavePath = '/Users/dunhamsj/Desktop/'
 
 #
 # ===== Beginning of testing =====
