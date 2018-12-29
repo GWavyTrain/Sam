@@ -86,17 +86,29 @@ z, tLb, rc = np.loadtxt( BasePath + 'strain/z_tLb_r.dat' )
 rInterp = interp1d( tLb, rc, kind = 'linear', fill_value = 'extrapolate' )
 r = rInterp( Bins * year * Gyr ) / Gpc # [ Gpc ]
 
+'''
 # Mapelli, Figure 1
+Vc = 0.1065**3 # [ Gpc^3 ]
+fig, ax = plt.subplots()
+fig.suptitle( 'Mapelli, Figure 1' )
+ax.step( Bins, counts / ( Vc * 10 * Myr ), 'r' )
+ax.set_xlabel( r'$t_{lb}\,\left[Gyr\right]$' )
+ax.set_ylabel( r'$R_{BHB}\,\left[Gpc^{-3}\,yr^{-1}\right]$' )
+ax.set_yscale('log')
+ax.set_ylim( 1.0e0, 7.0e3 )
+ax.set_xlim( 0.0, 14.0 )
+#plt.savefig( BasePath + 'MergerRateDensity/RBHB_Mapelli_Fig1.png' )
+plt.show()
+plt.close()
+'''
+
+# Taking into account expanding universe
 Vc = 4.0 / 3.0 * np.pi * r**3 # [ Gpc^3 ]
 fig, ax = plt.subplots()
-#fig.suptitle( 'Mapelli, Figure 1' )
 ax.step( Bins, counts / (Vc * 10 * Myr), 'r' )
 ax.set_xlabel( r'$t_{lb}\,\left[Gyr\right]$' )
 ax.set_ylabel( r'$R_{BHB}\,\left[Gpc^{-3}\,yr^{-1}\right]$' )
 ax.set_yscale('log')
-#ax.set_ylim( 1.0e0, 7.0e3 )
-ax.set_xlim( -0.1, 14.0 )
-#ax.legend()
-plt.savefig( BasePath + 'MergerRateDensity/RBHB_Vc.png' )
-#plt.show()
+#plt.savefig( BasePath + 'MergerRateDensity/RBHB_Vc.png' )
+plt.show()
 plt.close()
