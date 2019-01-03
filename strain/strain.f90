@@ -2,50 +2,53 @@ PROGRAM GWstrainFromBHBmergers
 
   IMPLICIT NONE
 
-  INTEGER  , PARAMETER   :: DP = KIND( 1.d0 )
-  INTEGER  , PARAMETER   :: Nq = 1000000 , Nz = 100 , Nf = 400 , Nc = 7
-  INTEGER  , PARAMETER   :: iID = 6 , iM1 = 7 , iM2 = 8 , itLB = 10
-  REAL(DP) , PARAMETER   :: PI = ACOS( -1.0d0 )
-  REAL(DP) , PARAMETER   :: OMEGA_M = 0.3d0 , OMEGA_L = 0.7d0
-  REAL(DP) , PARAMETER   :: H0 = 70.4d0 / 3.086d19
-  REAL(DP) , PARAMETER   :: z_max = 10.0d0 , dz = z_max / ( Nz - 1 )
-  REAL(DP) , PARAMETER   :: c = 3.0d10 , G = 6.67d-8
-  REAL(DP) , PARAMETER   :: Msun = 2.0d33 , Gyr = 1.0d9 * 86400.0d0 * 365.25d0
-  REAL(DP) , ALLOCATABLE :: IllustrisData(:,:)
-  REAL(DP)               :: LISA(Nf,2) , hc , z , tLB , r
-  REAL(DP)               :: M1 , M2 , f_ISCO
-  REAL(DP)               :: z_arr(Nz) , tLB_z_arr(Nz)
-  INTEGER                :: nLinesIllustris , Nss , i , j , k
-  INTEGER*4              :: MergerID
-  CHARACTER( len = 25 )  :: FILEIN
-  CHARACTER( len = 11 )  :: FMTIN
+  INTEGER,  PARAMETER   :: DP = KIND( 1.d0 )
+  INTEGER,  PARAMETER   :: Nq = 1000000, Nz = 100, Nf = 400, Nc = 9
+  INTEGER,  PARAMETER   :: iID = 6, iM1 = 7, iM2 = 8, itLB = 10
+  REAL(DP), PARAMETER   :: PI = ACOS( -1.0d0 )
+  REAL(DP), PARAMETER   :: OMEGA_M = 0.3d0, OMEGA_L = 0.7d0
+  REAL(DP), PARAMETER   :: H0 = 70.4d0 / 3.086d19
+  REAL(DP), PARAMETER   :: z_max = 10.0d0, dz = z_max / ( DBLE(Nz) - 1.0d0 )
+  REAL(DP), PARAMETER   :: c = 3.0d10, G = 6.67d-8
+  REAL(DP), PARAMETER   :: Msun = 2.0d33, Gyr = 1.0d9 * 86400.0d0 * 365.25d0
+  REAL(DP), ALLOCATABLE :: IllustrisData(:,:)
+  REAL(DP)              :: LISA(Nf,2), hc, z, tLB, r
+  REAL(DP)              :: M1, M2, f_ISCO
+  REAL(DP)              :: z_arr(Nz), tLB_z_arr(Nz)
+  INTEGER               :: nLinesIllustris, Nss, i, j, k
+  INTEGER*4             :: MergerID
+  CHARACTER(LEN=32) :: FILEIN, FMTIN
 
-  ! --- Read in frequencies from LISA sensitivity curve data file ---
-  OPEN( 100 , FILE = 'LISA_sensitivity.dat' )
+  ! === Read in frequencies from LISA sensitivity curve data file ===
+  OPEN( 100, FILE = 'LISA_sensitivity.dat' )
   ! --- Loop through comments ---
-  DO i = 1 , Nc
-    READ( 100 , * )
+  DO i = 1, Nc
+    READ( 100, * )
   END DO
-  DO i = 1 , Nf
-    READ( 100 , * ) LISA( i , : )
+  ! --- Loop through data ---
+  DO i = 1, Nf
+    READ( 100, * ) LISA(i,:)
+    READ( 100, * )
   END DO
   CLOSE( 100 )
 
-  ! --- Compute array of lookback times ---
-!  OPEN( 100 , FILE = 'tLB_z.dat' )
-!  WRITE( 100 , '(A9)' ) '# z , tLB'
-  DO i = 1 , Nz
-    z_arr(i)     = (i-1) * dz
+  ! === Compute array of lookback times ===
+  OPEN( 100, FILE = 'tLB_z.dat' )
+  WRITE( 100, '(A)' ) '# Redshift z, Lookback-Time tLB [Gyr]'
+  DO i = 1, Nz
+    z_arr(i)     = ( DBLE(i) - 1.0d0 ) * dz
     tLB_z_arr(i) = ComputeLookbackTime( z_arr(i) ) / Gyr
-!    WRITE( 100 , '(F13.10,1x,E13.6)' ) z_arr(i) , tLB_z_arr(i)
+    WRITE( 100, '(ES23.16E3,1x,ES23.16E3)' ) z_arr(i), tLB_z_arr(i)
   END DO
-!  CLOSE( 100 )
+  CLOSE( 100 )
 
   ! --- Create file for storing strains (first row will hold frequencies) ---
-  OPEN ( 100 , FILE = 'hc.dat' )
-  WRITE( 100 , '(A31)' ) '# ID, M1, M2, tLB , z, r, hc(f)'
-  WRITE( 100 , '(I7,1x,F7.4,1x,F7.4,1x,F13.10,1x,F13.10,1x,E16.10,400E13.6)' ) &
-    0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , 0.0d0 , LISA( : , 1 )
+  OPEN ( 100, FILE = 'hc.dat' )
+  WRITE( 100, '(A)' ) '# ID, M1, M2, tLB, z, r, hc(f)'
+  WRITE( 100, &
+    '(I8.8,1x,F7.4,1x,F7.4,1x,F13.10,1x,F13.10,1x,E23.16E3,1x,400E13.6)' ) &
+    0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, LISA(:,1)
+  STOP
 
   ! --- Loop through Illustris snapshots ---
   DO Nss = 26 , 27!135
@@ -62,7 +65,7 @@ PROGRAM GWstrainFromBHBmergers
         FMTIN = '(A18,I3,A4)'
       END IF
 
-      WRITE( FILEIN  , FMTIN  ) 'time_BHillustris1_' , Nss , '.dat'
+      WRITE( FILEIN, TRIM(FMTIN) ) 'time_BHillustris1_' , Nss , '.dat'
 
       ! --- Get number of lines (mergers) in Illustris data file ---
       nLinesIllustris = 0
@@ -127,11 +130,11 @@ PROGRAM GWstrainFromBHBmergers
   
 CONTAINS
 
-  ! --- Integrand E(z) in cosmological distance calculation ---
-  PURE FUNCTION E( z )
 
-    REAL(DP) , INTENT(in) :: z
-    REAL(DP)              :: E
+  ! --- Integrand E(z) in cosmological distance calculation ---
+  PURE REAL(DP) FUNCTION E( z )
+
+    REAL(DP), INTENT(in) :: z
 
     E = 1.0d0 / SQRT( OMEGA_M * ( 1.0d0 + z )**3 + OMEGA_L )
 
@@ -141,8 +144,8 @@ CONTAINS
   
   FUNCTION ComputeComovingDistance( z ) RESULT( r )
 
-    REAL(DP) , INTENT(in) :: z
-    REAL(DP)              :: r , dz
+    REAL(DP), INTENT(in) :: z
+    REAL(DP)             :: r, dz
 
     ! --- Integrate with Trapezoidal rule ---
     r  = 0.0d0
@@ -159,10 +162,9 @@ CONTAINS
 
   
   ! --- Integrand in lookback time calculation ---
-  PURE FUNCTION E_LB( z )
+  PURE REAL(DP) FUNCTION E_LB( z )
 
-    REAL(DP) , INTENT(in) :: z
-    REAL(DP)              :: E_LB
+    REAL(DP), INTENT(in) :: z
 
     E_LB = 1.0d0 / ( ( 1.0d0 + z ) &
              * SQRT( OMEGA_M * ( 1.0d0 + z )**3 + OMEGA_L ) )
@@ -171,18 +173,16 @@ CONTAINS
   END FUNCTION E_LB
 
   
-  FUNCTION ComputeLookbackTime( z ) RESULT( tLB )
+  REAL(DP) FUNCTION ComputeLookbackTime( z ) RESULT( tLB )
 
-    REAL(DP) , INTENT(in) :: z
-    REAL(DP)              :: dz
-    REAL(DP)              :: tLB
+    REAL(DP), INTENT(in) :: z
+    REAL(DP)             :: dz
+
+    dz = z / DBLE(Nq)
 
     ! --- Integrate with Trapezoidal rule ---
     tLB = 0.0d0
-    dz  = z / Nq
-
-    tLB = 0.0d0
-    DO k = 1 , Nq - 1
+    DO k = 1, Nq - 1
       tLB = tLB + E_LB( k * dz )
     END DO
 
@@ -194,11 +194,11 @@ CONTAINS
   
   ! --- Characteristic strain (dimensionless)
   !       from Sesana et al. (2005), Eq. (6) ---
-  PURE FUNCTION Strain( M1 , M2 , f ) RESULT( hc )
+  PURE FUNCTION Strain( M1, M2, f ) RESULT( hc )
 
     REAL(DP) , INTENT(in)  :: M1 , M2 , f
-    REAL(DP)               :: hc
     REAL(DP)               :: Mc
+    REAL(DP)               :: hc
 
     ! --- Compute chirp mass (in source frame) ---
     Mc = ( M1 * M2 )**( 3.0d0 / 5.0d0 ) / ( M1 + M2 )**( 1.0d0 / 5.0d0 ) * Msun
