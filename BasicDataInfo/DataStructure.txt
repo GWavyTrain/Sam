@@ -1,4 +1,5 @@
-Contains snapshots 26-135, missing 53 and 55
+Contains snapshots 26-135, missing 53 and 55,
+see http://www.illustris-project.org/data/docs/faq/#ill1 for explanation
 
 Naming:
 time_BHillustris1_XXX.dat, XXX is snapshot number
