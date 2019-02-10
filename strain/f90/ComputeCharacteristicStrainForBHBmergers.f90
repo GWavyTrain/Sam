@@ -3,7 +3,8 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
   IMPLICIT NONE
 
   INTEGER,  PARAMETER   :: DP = KIND( 1.d0 )
-  INTEGER,  PARAMETER   :: Nq = 1000000, nRedshifts = 100, &
+  INTEGER,  PARAMETER   :: iSnapshotMin = 26, iSnapshotMax = 27
+  INTEGER,  PARAMETER   :: Nq = 1000000, nRedshifts = 1000, &
                            nFrequencies = 400, nCommentLines = 9
   INTEGER,  PARAMETER   :: iM1 = 7, iM2 = 8, itLB = 10
   REAL(DP), PARAMETER   :: PI = ACOS( -1.0d0 )
@@ -19,12 +20,13 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
   REAL(DP)              :: LISA(nFrequencies,2), hc, z, tLB, r
   REAL(DP)              :: M1, M2, f_ISCO
   REAL(DP)              :: z_arr(nRedshifts), tLB_z_arr(nRedshifts)
-  INTEGER               :: nMergersPerSnapshot, iSnapshot, iMerger, i, j
+  INTEGER               :: nMergersPerSnapshot, iSnapshot, iMerger, i
   CHARACTER(LEN=9)      :: FMTIN
   CHARACTER(LEN=128)    :: FILEIN, RootPath
   LOGICAL               :: FileExists
 
   WRITE( RootPath, '(A)' ) '/Users/dunhamsj/Research/GW/Sam/'
+!  WRITE( RootPath, '(A)' ) '/astro1/dunhamsj/'
 
   ! === Read in frequencies from LISA sensitivity curve data file ===
   OPEN( 100, FILE = TRIM(RootPath) // 'LISA_sensitivity.dat' )
@@ -53,11 +55,11 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
   OPEN ( 100, FILE = TRIM(RootPath) // 'strain/f90/hc.dat' )
   WRITE( 100, '(A)' ) '# M1, M2, tLB, z, r, hc(f)'
   WRITE( 100, '(ES12.6E2,ES13.6E2,ES18.11E2, &
-              ES18.11E2,E18.11E2,400ES18.11E2)' ) &
-              0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, LISA(:,1)
+              & ES18.11E2,E18.11E2,400ES18.11E2)' ) &
+                0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, LISA(:,1)
 
   ! --- Loop through Illustris snapshots ---
-  DO iSnapshot = 26, 135
+  DO iSnapshot = iSnapshotMin, iSnapshotMax
 
     ! --- Get filenames ---
     IF ( iSnapshot .LT. 100 ) THEN

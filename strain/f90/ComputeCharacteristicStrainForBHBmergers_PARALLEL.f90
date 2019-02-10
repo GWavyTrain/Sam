@@ -3,7 +3,8 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
   IMPLICIT NONE
 
   INTEGER,  PARAMETER   :: DP = KIND( 1.d0 )
-  INTEGER,  PARAMETER   :: Nq = 1000000, nRedshifts = 100, &
+  INTEGER,  PARAMETER   :: iSnapshotMin = 26, iSnapshotMax = 27
+  INTEGER,  PARAMETER   :: Nq = 1000000, nRedshifts = 10, &
                            nFrequencies = 400, nCommentLines = 9
   INTEGER,  PARAMETER   :: iM1 = 7, iM2 = 8, itLB = 10
   REAL(DP), PARAMETER   :: PI = ACOS( -1.0d0 )
@@ -15,16 +16,19 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
                            SecondsPerGyr     = 1.0d9 * 86400.0d0 * 365.25d0
   REAL(DP), PARAMETER   :: c = 2.99792458d10, G = 6.673d-8
   REAL(DP), PARAMETER   :: Msun = 1.98892d33
-  REAL(DP), ALLOCATABLE :: IllustrisData(:,:)
+  REAL(DP)              :: IllustrisData(10)
   REAL(DP)              :: LISA(nFrequencies,2), hc, z, tLB, r
   REAL(DP)              :: M1, M2, f_ISCO
   REAL(DP)              :: z_arr(nRedshifts), tLB_z_arr(nRedshifts)
-  INTEGER               :: nMergersPerSnapshot, iSnapshot, iMerger, i, j
+  INTEGER               :: nMergersPerSnapshot, iSnapshot, iMerger, i
   CHARACTER(LEN=9)      :: FMTIN, FMTOUT
   CHARACTER(LEN=128)    :: FILEIN, FILEOUT, RootPath
   LOGICAL               :: FileExists
 
+  INTEGER :: nThreads, iThread, OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
+
   WRITE( RootPath, '(A)' ) '/Users/dunhamsj/Research/GW/Sam/'
+!  WRITE( RootPath, '(A)' ) '/astro1/dunhamsj/'
 
   ! === Read in frequencies from LISA sensitivity curve data file ===
   OPEN( 100, FILE = TRIM(RootPath) // 'LISA_sensitivity.dat' )
@@ -40,7 +44,7 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
   CLOSE( 100 )
 
   ! === Compute array of lookback-times ===
-  OPEN( 100, FILE = TRIM(RootPath) // 'strain/f90/tLB_z.dat' )
+  OPEN( 100, FILE = TRIM(RootPath) // 'strain/f90/tLB_z_PARALLEL.dat' )
   WRITE( 100, '(A)' ) '# Redshift z, Lookback-Time tLB [Gyr]'
   DO i = 1, nRedshifts
     z_arr    (i) = ( DBLE(i) - 1.0d0 ) * dz
@@ -50,8 +54,20 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
   CLOSE( 100 )
 
   ! --- Loop through Illustris snapshots ---
+  !$OMP PARALLEL DEFAULT(none), &
+  !$OMP & PRIVATE(iThread,tLb,z,r,FMTIN,FMTOUT,FILEIN,FILEOUT,IllustrisData, &
+  !$OMP &         nMergersPerSnapshot,FileExists,M1,M2,f_ISCO,i,hc), &
+  !$OMP & SHARED(nThreads,RootPath,LISA)
+
   !$OMP DO
-  DO iSnapshot = 26, 135
+  DO iSnapshot = iSnapshotMin, iSnapshotMax
+
+    iThread = OMP_GET_THREAD_NUM()
+    IF( iThread .EQ. 0 ) THEN
+      nThreads = OMP_GET_NUM_THREADS()
+      WRITE(*,'(A,I2.2)') 'Number of threads = ', nThreads
+    END IF
+    WRITE(*,'(A,I2.2,A)') 'Thread ', iThread,' starting...'
 
     ! --- Get filenames ---
     IF ( iSnapshot .LT. 100 ) THEN
@@ -73,31 +89,30 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
       TRIM(RootPath) // 'strain/f90/StrainFiles/hc_', iSnapshot, '.dat'
 
     ! --- Create file for storing strains (first row will hold frequencies) ---
-    OPEN ( 100, FILE = TRIM( FILEOUT ) )
-    WRITE( 100, '(A)' ) '# M1, M2, tLB, z, r, hc(f)'
-    WRITE( 100, '(ES12.6E2,ES13.6E2,ES18.11E2, &
-                ES18.11E2,E18.11E2,400ES18.11E2)' ) &
+    OPEN ( iSnapshot, FILE = TRIM( FILEOUT ) )
+    WRITE( iSnapshot, '(A)' ) '# M1, M2, tLB, z, r, hc(f)'
+    WRITE( iSnapshot, '(ES12.6E2,ES13.6E2,ES18.11E2, &
+                & ES18.11E2,E18.11E2,400ES18.11E2)' ) &
                 0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, LISA(:,1)
 
     ! --- Get number of lines (mergers) in Illustris data file ---
     nMergersPerSnapshot = 0
-    OPEN( 101, FILE = TRIM( FILEIN ) )
+    OPEN( iThread, FILE = TRIM( FILEIN ) )
     DO
-      READ( 101, *, END = 11 )
+      READ( iThread, *, END = 11 )
       nMergersPerSnapshot = nMergersPerSnapshot + 1
     END DO
-    11 CLOSE( 101 )
+    11 CLOSE( iThread )
 
     ! --- Read in Illustris data and compute strain for each merger ---
-    ALLOCATE( IllustrisData(nMergersPerSnapshot,10) )
-    OPEN( 101, FILE = TRIM( FILEIN ) )
+    OPEN( iThread, FILE = TRIM( FILEIN ) )
     DO iMerger = 1, nMergersPerSnapshot
-      READ( 101, * ) IllustrisData( iMerger, : )
+      READ( iThread, * ) IllustrisData(:)
 
       ! --- Get data for this merger ---
-      M1  = IllustrisData( iMerger, iM1  )
-      M2  = IllustrisData( iMerger, iM2  )
-      tLB = IllustrisData( iMerger, itLB )
+      M1  = IllustrisData( iM1  )
+      M2  = IllustrisData( iM2  )
+      tLB = IllustrisData( itLB )
 
       ! --- Compute redshift from lookback-time ---
       z = InterpolateLookbackTime( tLB )
@@ -105,7 +120,7 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
       ! --- Compute comoving distance (in Mpc) ---
       r = ComputeComovingDistance( z )
 
-      WRITE( 100, '(ES12.6E2,ES13.6E2,ES18.11E2,ES18.11E2,ES18.11E2)', &
+      WRITE( iSnapshot, '(ES12.6E2,ES13.6E2,ES18.11E2,ES18.11E2,ES18.11E2)', &
         ADVANCE = 'NO' ) M1, M2, tLB, z, r
         
       ! --- Calculate frequency at ISCO using Sesana et al., (2005) ---
@@ -115,28 +130,28 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
       ! --- Loop through frequencies until f_ISCO ---
       i = 1
       DO WHILE( ( LISA(i,1) .LT. f_ISCO ) .AND. ( i .LT. nFrequencies + 1 ) )
-        hc = ComputeCharacteristicStrain( LISA(i,1) )
-        WRITE( 100, '(ES18.11E2)', ADVANCE = 'NO' ) hc
+        hc = ComputeCharacteristicStrain( M1, M2, LISA(i,1) )
+        WRITE( iSnapshot, '(ES18.11E2)', ADVANCE = 'NO' ) hc
         i = i + 1
       END DO
 
       ! --- Fill in missing frequencies with 0.0d0 ---
       DO WHILE ( i < nFrequencies + 1 )
-        WRITE( 100, '(f4.1)' , ADVANCE = 'NO' ) 0.0d0
+        WRITE( iSnapshot, '(f4.1)' , ADVANCE = 'NO' ) 0.0d0
         i = i + 1
       END DO
 
-      WRITE( 100, * )
+      WRITE( iSnapshot, * )
          
     END DO
 
-    CLOSE( 101 )
-    DEALLOCATE( IllustrisData )
+    CLOSE( iThread )
 
-    CLOSE( 100 )
+    CLOSE( iSnapshot )
 
   END DO
-  !$OMP END DO
+  !$OMP END DO NOWAIT
+  !$OMP END PARALLEL
 
 
 CONTAINS
@@ -209,14 +224,15 @@ CONTAINS
   
   ! --- Characteristic strain (dimensionless)
   !       from Sesana et al. (2005), Eq. (6) ---
-  PURE FUNCTION ComputeCharacteristicStrain( f ) RESULT( hhc )
+  PURE FUNCTION ComputeCharacteristicStrain( MM1, MM2, f ) RESULT( hhc )
 
-    REAL(DP) , INTENT(in)  :: f
+    REAL(DP) , INTENT(in)  :: MM1, MM2, f
     REAL(DP)               :: Mc
     REAL(DP)               :: hhc
 
     ! --- Compute chirp mass (in source frame) ---
-    Mc = ( M1 * M2 )**( 3.0d0 / 5.0d0 ) / ( M1 + M2 )**( 1.0d0 / 5.0d0 ) * Msun
+    Mc = ( MM1 * MM2 )**( 3.0d0 / 5.0d0 ) &
+           / ( MM1 + MM2 )**( 1.0d0 / 5.0d0 ) * Msun
 
     hhc = 1.0d0 / ( SQRT( 3.0d0 * c**3 ) * PI**( 2.0d0 / 3.0d0 ) * r ) &
            * ( G * Mc )**( 5.0d0 / 6.0d0 ) * f**( -1.0d0 / 6.0d0 )
