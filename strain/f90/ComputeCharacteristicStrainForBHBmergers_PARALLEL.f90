@@ -20,8 +20,8 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
   REAL(DP)              :: M1, M2, f_ISCO
   REAL(DP)              :: z_arr(nRedshifts), tLB_z_arr(nRedshifts)
   INTEGER               :: nMergersPerSnapshot, iSnapshot, iMerger, i, j
-  CHARACTER(LEN=9)      :: FMTIN
-  CHARACTER(LEN=128)    :: FILEIN, RootPath
+  CHARACTER(LEN=9)      :: FMTIN, FMTOUT
+  CHARACTER(LEN=128)    :: FILEIN, FILEOUT, RootPath
   LOGICAL               :: FileExists
 
   WRITE( RootPath, '(A)' ) '/Users/dunhamsj/Research/GW/Sam/'
@@ -49,21 +49,17 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
   END DO
   CLOSE( 100 )
 
-  ! --- Create file for storing strains (first row will hold frequencies) ---
-  OPEN ( 100, FILE = TRIM(RootPath) // 'strain/f90/hc.dat' )
-  WRITE( 100, '(A)' ) '# M1, M2, tLB, z, r, hc(f)'
-  WRITE( 100, '(ES12.6E2,ES13.6E2,ES18.11E2, &
-              ES18.11E2,E18.11E2,400ES18.11E2)' ) &
-              0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, LISA(:,1)
-
   ! --- Loop through Illustris snapshots ---
+  !$OMP DO
   DO iSnapshot = 26, 135
 
     ! --- Get filenames ---
     IF ( iSnapshot .LT. 100 ) THEN
-      FMTIN = '(A,I2,A4)'
+      FMTIN  = '(A,I2,A4)'
+      FMTOUT = '(A,I2,A4)'
     ELSE
-      FMTIN = '(A,I3,A4)'
+      FMTIN  = '(A,I3,A4)'
+      FMTOUT = '(A,I3,A4)'
     END IF
 
     WRITE( FILEIN, FMTIN ) TRIM(RootPath) // &
@@ -72,6 +68,16 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
 
     INQUIRE( FILE = FILEIN, EXIST = FileExists )
     IF( .NOT. FileExists ) CYCLE
+
+    WRITE( FILEOUT, FMTOUT ) &
+      TRIM(RootPath) // 'strain/f90/StrainFiles/hc_', iSnapshot, '.dat'
+
+    ! --- Create file for storing strains (first row will hold frequencies) ---
+    OPEN ( 100, FILE = TRIM( FILEOUT ) )
+    WRITE( 100, '(A)' ) '# M1, M2, tLB, z, r, hc(f)'
+    WRITE( 100, '(ES12.6E2,ES13.6E2,ES18.11E2, &
+                ES18.11E2,E18.11E2,400ES18.11E2)' ) &
+                0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, LISA(:,1)
 
     ! --- Get number of lines (mergers) in Illustris data file ---
     nMergersPerSnapshot = 0
@@ -127,9 +133,10 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
     CLOSE( 101 )
     DEALLOCATE( IllustrisData )
 
-  END DO
+    CLOSE( 100 )
 
-  CLOSE( 100 )
+  END DO
+  !$OMP END DO
 
 
 CONTAINS
