@@ -2,28 +2,35 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
 
   IMPLICIT NONE
 
-  INTEGER,  PARAMETER   :: DP = KIND( 1.d0 )
-  INTEGER,  PARAMETER   :: iSnapshotMin = 26, iSnapshotMax = 27
-  INTEGER,  PARAMETER   :: Nq = 1000000, nRedshifts = 1000, &
-                           nFrequencies = 400, nCommentLines = 9
-  INTEGER,  PARAMETER   :: iM1 = 7, iM2 = 8, itLB = 10
-  REAL(DP), PARAMETER   :: PI = ACOS( -1.0d0 )
-  REAL(DP), PARAMETER   :: OMEGA_M = 0.3d0, OMEGA_L = 0.7d0, &
-                           H0 = 70.4d0 / 3.086d19
-  REAL(DP), PARAMETER   :: z_max = 16.0d0, &
-                           dz = z_max / ( DBLE(nRedshifts) - 1.0d0 )
-  REAL(DP), PARAMETER   :: CentimetersPerMpc = 3.086d24, &
-                           SecondsPerGyr     = 1.0d9 * 86400.0d0 * 365.25d0
-  REAL(DP), PARAMETER   :: c = 2.99792458d10, G = 6.673d-8
-  REAL(DP), PARAMETER   :: Msun = 1.98892d33
-  REAL(DP), ALLOCATABLE :: IllustrisData(:,:)
-  REAL(DP)              :: LISA(nFrequencies,2), hc, z, tLB, r
-  REAL(DP)              :: M1, M2, f_ISCO
-  REAL(DP)              :: z_arr(nRedshifts), tLB_z_arr(nRedshifts)
-  INTEGER               :: nMergersPerSnapshot, iSnapshot, iMerger, i
-  CHARACTER(LEN=9)      :: FMTIN
-  CHARACTER(LEN=128)    :: FILEIN, RootPath
-  LOGICAL               :: FileExists
+  INTEGER,  PARAMETER :: DP = KIND( 1.d0 )
+  INTEGER,  PARAMETER :: iSnapshotMin = 26, iSnapshotMax = 26
+  INTEGER,  PARAMETER :: Nq = 1000000, nRedshifts = 1000, &
+                         nFrequenciesAll = 400, nFrequencies = 10, &
+                         nSkip = nFrequenciesAll / nFrequencies, &
+                         nCommentLines = 9
+  INTEGER,  PARAMETER :: iM1 = 7, iM2 = 8, itLb = 10
+  REAL(DP), PARAMETER :: PI = ACOS( -1.0d0 )
+  REAL(DP), PARAMETER :: OMEGA_M = 0.3d0, OMEGA_L = 0.7d0, &
+                         H0 = 70.4d0 / 3.086d19
+  REAL(DP), PARAMETER :: z_max = 25.0d0, &
+                         dz = z_max / ( DBLE(nRedshifts) - 1.0d0 )
+  REAL(DP), PARAMETER :: CentimetersPerMpc = 3.086d24, &
+                         SecondsPerGyr = 86400.0d0 * 365.25d0 * 1.0d9
+  REAL(DP), PARAMETER :: c = 2.99792458d10, G = 6.673d-8
+  REAL(DP), PARAMETER :: Msun = 1.98892d33
+  REAL(DP)            :: IllustrisData(10)
+  REAL(DP)            :: LISA_all(nFrequenciesAll,2), LISA(nFrequencies)
+  REAL(DP)            :: hc, z, tLb, r, M1, M2, f_ISCO
+  REAL(DP)            :: z_arr(nRedshifts), tLb_z_arr(nRedshifts)
+  INTEGER             :: nMergersPerSnapshot, iSnapshot, iMerger, iStrainFile, i
+  CHARACTER(LEN=9)    :: FMTIN, FMTOUT
+  CHARACTER(LEN=128)  :: FILEIN, FILEOUT, RootPath, &
+                         LookbackTimeRedshiftFile, WriteFile
+  LOGICAL             :: FileExists
+#ifdef _OPENMP
+  INTEGER             :: iThread, nThreads, &
+                         OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
+#endif
 
   WRITE( RootPath, '(A)' ) '/Users/dunhamsj/Research/GW/Sam/'
 !  WRITE( RootPath, '(A)' ) '/astro1/dunhamsj/'
@@ -35,37 +42,81 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
     READ( 100, * )
   END DO
   ! --- Loop through data ---
-  DO i = 1, nFrequencies
-    READ( 100, * ) LISA(i,:)
+  DO i = 1, nFrequenciesAll
+    READ( 100, * ) LISA_all(i,:)
     READ( 100, * )
   END DO
   CLOSE( 100 )
 
-  ! === Compute array of lookback-times ===
-  OPEN( 100, FILE = TRIM(RootPath) // 'strain/f90/tLB_z.dat' )
-  WRITE( 100, '(A)' ) '# Redshift z, Lookback-Time tLB [Gyr]'
-  DO i = 1, nRedshifts
-    z_arr    (i) = ( DBLE(i) - 1.0d0 ) * dz
-    tLB_z_arr(i) = ComputeLookbackTime( z_arr(i) )
-    WRITE( 100, '(ES23.16E3,1x,ES23.16E3)' ) z_arr(i), tLB_z_arr(i)
+  ! --- Trim LISA data ---
+  LISA(1) = LISA_all(1,1)
+  DO i = 2, nFrequencies-1
+    iMerger = nSkip * (i-1)
+    LISA(i) = LISA_all(iMerger,1)
   END DO
-  CLOSE( 100 )
+  LISA(nFrequencies) = LISA_all(nFrequenciesAll,1)
 
-  ! --- Create file for storing strains (first row will hold frequencies) ---
-  OPEN ( 100, FILE = TRIM(RootPath) // 'strain/f90/hc.dat' )
-  WRITE( 100, '(A)' ) '# M1, M2, tLB, z, r, hc(f)'
-  WRITE( 100, '(ES12.6E2,ES13.6E2,ES18.11E2, &
-              & ES18.11E2,E18.11E2,400ES18.11E2)' ) &
-                0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, LISA(:,1)
+  ! === Compute array of lookback-times ===
+  WRITE( LookbackTimeRedshiftFile, '(A,I10.10,A)' ) &
+         TRIM(RootPath) // 'strain/f90/tLb_z_', nRedshifts, '.dat'
 
-  ! --- Loop through Illustris snapshots ---
+  INQUIRE( FILE = TRIM(LookbackTimeRedshiftFile), EXIST = FileExists )
+  IF( .NOT. FileExists )THEN
+    WriteFile = 'Y'
+  ELSE
+    WRITE(*,'(A,A,A)') &
+      'File ', TRIM(LookbackTimeRedshiftFile), ' exists. Overwrite? (Y/N) '
+    READ(*,*) WriteFile
+  END IF
+
+  IF( TRIM(WriteFile) .EQ. 'Y' )THEN
+    WRITE(*,'(A,A)') 'Writing file: ', TRIM(LookbackTimeRedshiftFile)
+    OPEN( 100, FILE = TRIM(LookbackTimeRedshiftFile) )
+    WRITE( 100, '(A)' ) '# Redshift z, Lookback-Time tLb [Gyr]'
+    DO i = 1, nRedshifts
+      z_arr    (i) = ( DBLE(i) - 1.0d0 ) * dz
+      tLb_z_arr(i) = ComputeLookbackTime( z_arr(i) )
+      WRITE( 100, '(ES23.16E3,1x,ES23.16E3)' ) z_arr(i), tLb_z_arr(i)
+    END DO
+    CLOSE( 100 )
+  ELSE
+    OPEN( 100, FILE = TRIM(LookbackTimeRedshiftFile) )
+      READ( 100, * )
+      DO i = 1, nRedshifts
+        READ( 100, '(ES23.16E3,1x,ES23.16E3)' ) z_arr(i), tLb_z_arr(i)
+      END DO
+    CLOSE( 100 )
+  END IF
+
+  ! === Loop through Illustris snapshots ===
+
+  !$OMP PARALLEL DEFAULT(NONE) &
+  !$OMP & PRIVATE(iSnapshot,iThread,iStrainFile,FMTIN,FMTOUT,FILEIN,FILEOUT, &
+  !$OMP & FileExists,nMergersPerSnapshot,IllustrisData,M1,M2,tLb, &
+  !$OMP & z,r,f_ISCO,i,hc) &
+  !$OMP & SHARED(nThreads,RootPath,LISA,z_arr,tLb_z_arr)
+
+  !$OMP DO
   DO iSnapshot = iSnapshotMin, iSnapshotMax
 
+#ifdef _OPENMP
+    iThread = OMP_GET_THREAD_NUM()
+    IF( iThread .EQ. 0 ) THEN
+      nThreads = OMP_GET_NUM_THREADS()
+      WRITE(*,'(A,I2.2)') 'Number of available threads = ', nThreads
+    END IF
+    iStrainFile = iThread
+#else
+    iStrainFile = 101
+#endif
+
     ! --- Get filenames ---
-    IF ( iSnapshot .LT. 100 ) THEN
-      FMTIN = '(A,I2,A4)'
+    IF( iSnapshot .LT. 100 ) THEN
+      FMTIN  = '(A,I2,A4)'
+      FMTOUT = '(A,I2,A4)'
     ELSE
-      FMTIN = '(A,I3,A4)'
+      FMTIN  = '(A,I3,A4)'
+      FMTOUT = '(A,I3,A4)'
     END IF
 
     WRITE( FILEIN, FMTIN ) TRIM(RootPath) // &
@@ -75,128 +126,144 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
     INQUIRE( FILE = FILEIN, EXIST = FileExists )
     IF( .NOT. FileExists ) CYCLE
 
+    WRITE( FILEOUT, FMTOUT ) &
+      TRIM(RootPath) // 'strain/f90/StrainFiles/hc_', iSnapshot, '.dat'
+
+    ! --- Create file for storing strains (first row will hold frequencies) ---
+    OPEN ( iStrainFile, FILE = TRIM( FILEOUT ) )
+    WRITE( iStrainFile, '(A,I3.3,A)' ) &
+      '# M1 [Msun], M2 [Msun], Lookback-time to merger [Gyr],&
+      & Redshift at merge, Comoving distance to merger [Mpc], fISCO,&
+      & Characteristic strain (', nFrequencies, ') entries)'
+    WRITE( iStrainFile, '(A)' ) '# (First row contains LISA frequencies [Hz])'
+    WRITE( iStrainFile, '(ES12.6E2,ES13.6E2,ES18.11E2, &
+                & ES18.11E2,E18.11E2,E18.11E2,10ES18.11E2)' ) &
+                0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, LISA(:)
+
     ! --- Get number of lines (mergers) in Illustris data file ---
     nMergersPerSnapshot = 0
-    OPEN( 101, FILE = TRIM( FILEIN ) )
+    OPEN( iSnapshot, FILE = TRIM( FILEIN ) )
     DO
-      READ( 101, *, END = 11 )
+      READ( iSnapshot, *, END = 11 )
       nMergersPerSnapshot = nMergersPerSnapshot + 1
     END DO
-    11 CLOSE( 101 )
+    11 CLOSE( iSnapshot )
 
     ! --- Read in Illustris data and compute strain for each merger ---
-    ALLOCATE( IllustrisData(nMergersPerSnapshot,10) )
-    OPEN( 101, FILE = TRIM( FILEIN ) )
+    OPEN( iSnapshot, FILE = TRIM( FILEIN ) )
     DO iMerger = 1, nMergersPerSnapshot
-      READ( 101, * ) IllustrisData( iMerger, : )
+      READ( iSnapshot, * ) IllustrisData(:)
 
       ! --- Get data for this merger ---
-      M1  = IllustrisData( iMerger, iM1  )
-      M2  = IllustrisData( iMerger, iM2  )
-      tLB = IllustrisData( iMerger, itLB )
+      M1  = IllustrisData( iM1  )
+      M2  = IllustrisData( iM2  )
+      tLb = IllustrisData( itLb )
 
       ! --- Compute redshift from lookback-time ---
-      z = InterpolateLookbackTime( tLB )
+      z = InterpolateLookbackTimeToGetRedshift( tLb, z_arr, tLb_z_arr )
         
       ! --- Compute comoving distance (in Mpc) ---
       r = ComputeComovingDistance( z )
 
-      WRITE( 100, '(ES12.6E2,ES13.6E2,ES18.11E2,ES18.11E2,ES18.11E2)', &
-        ADVANCE = 'NO' ) M1, M2, tLB, z, r
-        
       ! --- Calculate frequency at ISCO using Sesana et al., (2005) ---
       f_ISCO = c**3 / ( 6.0d0**( 3.0d0 / 2.0d0 ) * PI * G &
                  * ( M1 + M2 ) * Msun  * ( 1.0d0 + z ) )
 
+      WRITE( iStrainFile, &
+             '(ES12.6E2,ES13.6E2,ES18.11E2,ES18.11E2,ES18.11E2,ES18.11E2)', &
+              ADVANCE = 'NO' ) M1, M2, tLb, z, r, f_ISCO
+        
       ! --- Loop through frequencies until f_ISCO ---
       i = 1
-      DO WHILE( ( LISA(i,1) .LT. f_ISCO ) .AND. ( i .LT. nFrequencies + 1 ) )
-        hc = ComputeCharacteristicStrain( LISA(i,1) )
-        WRITE( 100, '(ES18.11E2)', ADVANCE = 'NO' ) hc
+      DO WHILE( ( LISA(i) .LT. f_ISCO ) .AND. ( i .LE. nFrequencies ) )
+        hc = ComputeCharacteristicStrain( M1, M2, LISA(i), r )
+        WRITE( iStrainFile, '(ES18.11E2)', ADVANCE = 'NO' ) hc
         i = i + 1
       END DO
 
       ! --- Fill in missing frequencies with 0.0d0 ---
-      DO WHILE ( i < nFrequencies + 1 )
-        WRITE( 100, '(f4.1)' , ADVANCE = 'NO' ) 0.0d0
+      DO WHILE( i .LE. nFrequencies )
+        WRITE( iStrainFile, '(f4.1)' , ADVANCE = 'NO' ) 0.0d0
         i = i + 1
       END DO
 
-      WRITE( 100, * )
+      WRITE( iStrainFile, * )
          
     END DO
 
-    CLOSE( 101 )
-    DEALLOCATE( IllustrisData )
+    CLOSE( iSnapshot )
+
+    CLOSE( iStrainFile )
 
   END DO
-
-  CLOSE( 100 )
+  !$OMP END DO NOWAIT
+  !$OMP END PARALLEL
 
 
 CONTAINS
 
 
   ! --- Integrand E(z) in cosmological distance calculation ---
-  PURE REAL(DP) FUNCTION E( zz )
+  PURE REAL(DP) FUNCTION E( z )
 
-    REAL(DP), INTENT(in) :: zz
+    REAL(DP), INTENT(in) :: z
 
-    E = 1.0d0 / SQRT( OMEGA_M * ( 1.0d0 + zz )**3 + OMEGA_L )
+    E = 1.0d0 / SQRT( OMEGA_M * ( 1.0d0 + z )**3 + OMEGA_L )
 
     RETURN
   END FUNCTION E
 
 
-  FUNCTION ComputeComovingDistance( zz ) RESULT( rr )
+  FUNCTION ComputeComovingDistance( z ) RESULT( r )
 
-    REAL(DP), INTENT(in) :: zz
-    REAL(DP)             :: rr, dzz
+    REAL(DP), INTENT(in) :: z
+    REAL(DP)             :: r, dz
     INTEGER              :: k
 
     ! --- Integrate with Trapezoidal rule ---
-    rr  = 0.0d0
-    dzz = zz / Nq
+    r  = 0.0d0
+    dz = z / Nq
     
     DO k = 1, Nq - 1
-       rr = rr + E( k * dzz )
+       r = r + E( k * dz )
     END DO
 
-    rr = c / H0 * dzz / 2.0d0 * ( E( 0.0d0 ) + 2.0d0 * rr + E( zz ) ) &
-           / CentimetersPerMpc
+    r = c / H0 / CentimetersPerMpc &
+           * dz / 2.0d0 * ( E( 0.0d0 ) + 2.0d0 * r + E( z ) )
 
     RETURN
   END FUNCTION ComputeComovingDistance
 
   
   ! --- Integrand in lookback time calculation ---
-  PURE REAL(DP) FUNCTION E_LB( zz )
+  PURE REAL(DP) FUNCTION E_Lb( z )
 
-    REAL(DP), INTENT(in) :: zz
+    REAL(DP), INTENT(in) :: z
 
-    E_LB = 1.0d0 / ( ( 1.0d0 + zz ) &
-             * SQRT( OMEGA_M * ( 1.0d0 + zz )**3 + OMEGA_L ) )
+    E_Lb = 1.0d0 / ( ( 1.0d0 + z ) &
+             * SQRT( OMEGA_M * ( 1.0d0 + z )**3 + OMEGA_L ) )
     
     RETURN
-  END FUNCTION E_LB
+  END FUNCTION E_Lb
 
-  
-  REAL(DP) FUNCTION ComputeLookbackTime( zz ) RESULT( ttLB )
 
-    REAL(DP), INTENT(in) :: zz
-    REAL(DP)             :: dzz
+  ! --- Returns look-back time in Gyr ---
+  REAL(DP) FUNCTION ComputeLookbackTime( z ) RESULT( tLb )
+
+    REAL(DP), INTENT(in) :: z
+    REAL(DP)             :: dz
     INTEGER              :: k
 
-    dzz = zz / DBLE(Nq)
+    dz = z / DBLE(Nq)
 
     ! --- Integrate with Trapezoidal rule ---
-    ttLB = 0.0d0
+    tLb = 0.0d0
     DO k = 1, Nq - 1
-      ttLB = tLB + E_LB( k * dzz )
+      tLb = tLb + E_Lb( k * dz )
     END DO
 
-    ttLB = 1.0d0 / H0 * dzz / 2.0d0 &
-             * ( E_LB( 0.0d0 ) + 2.0d0 * ttLB + E_LB( zz ) ) / SecondsPerGyr
+    tLb = 1.0d0 / H0 / SecondsPerGyr &
+            * dz / 2.0d0 * ( E_Lb( 0.0d0 ) + 2.0d0 * tLb + E_Lb( z ) )
     
     RETURN
   END FUNCTION ComputeLookbackTime
@@ -204,16 +271,19 @@ CONTAINS
   
   ! --- Characteristic strain (dimensionless)
   !       from Sesana et al. (2005), Eq. (6) ---
-  PURE FUNCTION ComputeCharacteristicStrain( f ) RESULT( hhc )
+  FUNCTION ComputeCharacteristicStrain( M1, M2, f, r ) RESULT( hc )
 
-    REAL(DP) , INTENT(in)  :: f
+    REAL(DP) , INTENT(in)  :: M1, M2, f, r
     REAL(DP)               :: Mc
-    REAL(DP)               :: hhc
+    REAL(DP)               :: hc, rcm
+
+    rcm = r * CentimetersPerMpc
 
     ! --- Compute chirp mass (in source frame) ---
-    Mc = ( M1 * M2 )**( 3.0d0 / 5.0d0 ) / ( M1 + M2 )**( 1.0d0 / 5.0d0 ) * Msun
+    Mc = ( M1 * M2 )**( 3.0d0 / 5.0d0 ) &
+           / ( M1 + M2 )**( 1.0d0 / 5.0d0 ) * Msun
 
-    hhc = 1.0d0 / ( SQRT( 3.0d0 * c**3 ) * PI**( 2.0d0 / 3.0d0 ) * r ) &
+    hc = 1.0d0 / ( SQRT( 3.0d0 * c**3 ) * PI**( 2.0d0 / 3.0d0 ) * rcm ) &
            * ( G * Mc )**( 5.0d0 / 6.0d0 ) * f**( -1.0d0 / 6.0d0 )
 
     RETURN
@@ -221,58 +291,68 @@ CONTAINS
 
   
   ! --- Interpolate lookback-time array to get redshift ---
-  FUNCTION InterpolateLookbackTime( ttLb ) RESULT( z )
+  FUNCTION InterpolateLookbackTimeToGetRedshift &
+    ( tLb, z_arr, tLb_z_arr ) RESULT( z )
 
-    REAL(DP), INTENT(in) :: ttLb
-    REAL(DP)             :: zMin, zMax, tLbMin, tLbMax, tLbi, m, b, z
+    ! --- tLb and tLb_z_arr should be input in units of Gyr ---
+
+    REAL(DP), INTENT(in) :: tLb, z_arr(nRedshifts), tLb_z_arr(nRedshifts)
+    REAL(DP)             :: zMin, zMax, tLbMin, tLbMax, tLb_k, m, b, z
     INTEGER              :: k
+    LOGICAL              :: DEBUG = .FALSE.
 
-    ! --- Small lookback time approximation: ttLb ~ tH * z ---
-    IF ( ttLb .LT. 0.5d0 ) THEN
-      z = ttLb * ( H0 * SecondsPerGyr )
+    ! --- Small lookback time approximation: tLb ~ tH * z ---
+    IF( tLb .LT. 0.5d0 ) THEN
+      IF( DEBUG ) WRITE(*,*) 'Using small lookback-time approximation...'
+      z = tLb * ( H0 * SecondsPerGyr )
       RETURN
     END IF
 
-    tLbi = tLb_z_arr(1)
-    IF ( ttLb < tLb_z_arr(nRedshifts) ) THEN
+    ! --- Interpolate using linear interpolation ---
+    IF( tLb .LT. tLb_z_arr(nRedshifts-1) ) THEN
 
-       ! --- Interpolate using linear interpolation ---
+      IF( DEBUG ) WRITE(*,*) 'Interpolating...'
 
-       ! --- Get redshift bounds ---
-       k = 1
-       DO WHILE ( tLbi .LE. ttLb )
-          k = k + 1
-          tLbi = tLb_z_arr(k)
-       END DO
+      ! --- Get redshift bounds ---
+      k = 1
+      tLb_k = tLb_z_arr(k)
+      DO WHILE( tLb_k .LT. tLb )
+         k = k + 1
+         tLb_k = tLb_z_arr(k)
+      END DO
 
-       zMin   = z_arr(k)
-       zMax   = z_arr(k+1)
-       tLbMin = tLb_z_arr(k)
-       tLbMax = tLb_z_arr(k+1)
+      zMin   = z_arr    (k-1)
+      zMax   = z_arr    (k  )
+      tLbMin = tLb_z_arr(k-1)
+      tLbMax = tLb_z_arr(k  )
 
-       ! --- ttLb = m * z + b ---
-       m = ( tLbMax - tLbMin ) / ( zMax - zMin )
-       b = 0.5d0 * ( ( tLbMax - m * zMax ) + ( tLbMin - m * zMin ) )
-
+    ! --- Extrapolate using linear extrapolation ---
     ELSE
 
-       ! --- Extrapolate using linear extrapolation ---
+      IF( DEBUG ) WRITE(*,*) 'Extrapolating...'
 
-       zMin   = z_arr(nRedshifts-1)
-       zMax   = z_arr(nRedshifts)
-       tLbMin = tLb_z_arr(nRedshifts-1)
-       tLbMax = tLb_z_arr(nRedshifts)
-
-       ! --- ttLb = m * z + b ---
-       m = ( tLbMax - tLbMin ) / ( zMax - zMin )
-       b = 0.5d0 * ( ( tLbMax - m * zMax ) + ( tLbMin - m * zMin ) )
+      zMin   = z_arr    (nRedshifts-1)
+      zMax   = z_arr    (nRedshifts  )
+      tLbMin = tLb_z_arr(nRedshifts-1)
+      tLbMax = tLb_z_arr(nRedshifts  )
 
     END IF
 
-    z = ( ttLb - b ) / m
+    ! --- tLb = m * z + b ---
+    m = ( tLbMax - tLbMin ) / ( zMax - zMin )
+    b = 0.5d0 * ( ( tLbMax - m * zMax ) + ( tLbMin - m * zMin ) )
+
+    z = ( tLb - b ) / m
+
+    IF( DEBUG )THEN
+      WRITE(*,*) 'tLb    = ', tLb
+      WRITE(*,*) 'tLbMin = ', tLbMin
+      WRITE(*,*) 'tLbMax = ', tLbMax
+      WRITE(*,*)
+    END IF
 
     RETURN
-  END FUNCTION InterpolateLookbackTime
+  END FUNCTION InterpolateLookbackTimeToGetRedshift
 
 
 END PROGRAM ComputeCharacteristicStrainForBHBmergers
