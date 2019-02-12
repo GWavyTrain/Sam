@@ -5,8 +5,10 @@ FC = gfortran
 
 ifeq ($(USE_OpenMP),TRUE)
 	FLAGS = -Wall -fopenmp -cpp
+	SUFFIX = _OpenMP
 else
 	FLAGS = -Wall -cpp
+	SUFFIX = 
 endif
 
 MAIN = ComputeCharacteristicStrainForBHBmergers
@@ -18,7 +20,7 @@ all: $(MAIN)
 
 $(MAIN):
 	$(FC) $(FLAGS) -c $(SRC)
-	$(FC) $(FLAGS) -o $(MAIN) $(OBJ)
+	$(FC) $(FLAGS) -o $(MAIN)$(SUFFIX) $(OBJ)
 
 clean:
-	rm -f $(MAIN) *.o *.mod
+	rm -f $(MAIN)$(SUFFIX) *.o *.mod
