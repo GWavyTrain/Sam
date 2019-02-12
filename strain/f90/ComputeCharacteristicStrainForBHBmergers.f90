@@ -1,5 +1,7 @@
 PROGRAM ComputeCharacteristicStrainForBHBmergers
 
+  USE UtilitiesModule
+
   IMPLICIT NONE
 
   INTEGER,  PARAMETER :: DP = KIND( 1.d0 )
@@ -27,6 +29,8 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
   CHARACTER(LEN=128)  :: FILEIN, FILEOUT, RootPath, &
                          LookbackTimeRedshiftFile, WriteFile
   LOGICAL             :: FileExists
+  INTEGER             :: N
+  REAL(DP) :: s
 #ifdef _OPENMP
   INTEGER             :: iThread, nThreads, &
                          OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
@@ -353,6 +357,13 @@ CONTAINS
 
     RETURN
   END FUNCTION InterpolateLookbackTimeToGetRedshift
+
+
+  PURE REAL(DP) FUNCTION Func(x) RESULT(y)
+    REAL(DP), INTENT(in) :: x
+    y = x**2
+    RETURN
+  END FUNCTION Func
 
 
 END PROGRAM ComputeCharacteristicStrainForBHBmergers

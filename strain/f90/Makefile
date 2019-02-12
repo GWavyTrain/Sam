@@ -11,15 +11,14 @@ endif
 
 MAIN = ComputeCharacteristicStrainForBHBmergers
 
+SRC = UtilitiesModule.f90 $(MAIN).f90
+OBJ = UtilitiesModule.o $(MAIN).o
+
 all: $(MAIN)
 
-ifeq ($(USE_OpenMP),TRUE)
 $(MAIN):
-	$(FC) $(FLAGS) -o $(MAIN)_OpenMP $(MAIN).f90
-else
-$(MAIN):
-	$(FC) $(FLAGS) -o $(MAIN) $(MAIN).f90
-endif
+	$(FC) $(FLAGS) -c $(SRC)
+	$(FC) $(FLAGS) -o $(MAIN) $(OBJ)
 
 clean:
-	rm -f $(MAIN)
+	rm -f $(MAIN) *.o *.mod
