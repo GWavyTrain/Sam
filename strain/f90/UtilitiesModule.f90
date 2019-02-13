@@ -46,4 +46,51 @@ CONTAINS
   END SUBROUTINE TrapezoidalRule
 
 
+  SUBROUTINE polint( xa, ya, n, x, y, dy )
+
+    INTEGER,  INTENT(in)    :: N
+    REAL(DP), INTENT(in)    :: xa(N), ya(N), x
+    REAL(DP), INTENT(inout) :: y, dy
+
+    INTEGER, PARAMETER :: nMax = 10
+    INTEGER            :: i, m, ns
+    REAL(DP)           :: den, dif, dift, ho, hp, w, c(nMax), d(nMax)
+
+    ns = 1
+    dif = ABS( x - xa(1) )
+    DO i = 1, N
+      dift = ABS( x - xa(i) )
+      IF( dift .LT. dif )THEN
+        ns = i
+        dif = dift
+      END IF
+      c(i) = ya(i)
+      d(i) = ya(i)
+    END DO
+    y = ya(ns)
+    ns = ns - 1
+    DO m = 1, n - i
+      DO i = 1, n - m
+        ho = xa(i) - x
+        hp = xa(i+m) - x
+        w = c(i+1)-d(i)
+        den = ho - hp
+        IF( den .EQ. 0 ) PAUSE 'Failure in polint'
+        den = w / den
+        d(i) = hp * den
+        c(i) = ho * den
+      END DO
+      IF( 2 * ns .LT. n-m )THEN
+        dy = c(ns+1)
+      ELSE
+        dy = d(ns)
+        ns = ns-1
+      END IF
+      y = y + dy
+    END DO
+
+
+  END SUBROUTINE polint
+
+
 END MODULE UtilitiesModule
