@@ -46,51 +46,69 @@ CONTAINS
   END SUBROUTINE TrapezoidalRule
 
 
-  SUBROUTINE polint( xa, ya, n, x, y, dy )
+  SUBROUTINE PolynomialInterpolationAndExtrapolation( xa, ya, N, x, y, dy )
+
+    ! --- Taken from Press et al., Numerical Recipes in Fortran 77,
+    !        pp. 103-104 ---
 
     INTEGER,  INTENT(in)    :: N
     REAL(DP), INTENT(in)    :: xa(N), ya(N), x
     REAL(DP), INTENT(inout) :: y, dy
 
-    INTEGER, PARAMETER :: nMax = 10
-    INTEGER            :: i, m, ns
-    REAL(DP)           :: den, dif, dift, ho, hp, w, c(nMax), d(nMax)
+    INTEGER, PARAMETER :: Nmax = 10
+    INTEGER            :: i, m, ind
+    REAL(DP)           :: dx, dx_i, Coeff, C(Nmax), D(Nmax)
 
-    ns = 1
-    dif = ABS( x - xa(1) )
+    ! --- Find the index, ind, of the closest array element ---
+    ind = 1
+    dx  = ABS( x - xa(1) )
     DO i = 1, N
-      dift = ABS( x - xa(i) )
-      IF( dift .LT. dif )THEN
-        ns = i
-        dif = dift
+      dx_i = ABS( x - xa(i) )
+      IF( dx_i .LT. dx )THEN
+        ind = i
+        dx  = dx_i
       END IF
-      c(i) = ya(i)
-      d(i) = ya(i)
+      C(i) = ya(i)
+      D(i) = ya(i)
     END DO
-    y = ya(ns)
-    ns = ns - 1
-    DO m = 1, n - i
-      DO i = 1, n - m
-        ho = xa(i) - x
-        hp = xa(i+m) - x
-        w = c(i+1)-d(i)
-        den = ho - hp
-        IF( den .EQ. 0 ) PAUSE 'Failure in polint'
-        den = w / den
-        d(i) = hp * den
-        c(i) = ho * den
+
+    ! --- Initial approximation to y, i.e. value of ya at closest index, ind ---
+    y   = ya(ind)
+    ind = ind - 1
+
+    ! --- Loop over columns, m (starting with second column) ---
+    DO m = 1, N-1
+
+      ! --- Loop over rows i in column m ---
+      DO i = 1, N-m
+
+        ! This only happens if two input xa's are identical
+        !   (within roundoff error)
+        IF( ( xa(i) - xa(i+m) ) .EQ. 0.0d0 ) &
+          STOP 'Failure in PolynomialInterpolationAndExtrapolation'
+
+        ! --- Coefficient in Eq. (3.1.5) ---
+        Coeff = ( C(i+1) - D(i) ) / ( xa(i) - xa(i+m) )
+
+        ! --- Update C's and D's, Eq. (3.1.5) ---
+        D(i) = ( xa(i+m) - x ) * Coeff
+        C(i) = ( xa(i  ) - x ) * Coeff
+
       END DO
-      IF( 2 * ns .LT. n-m )THEN
-        dy = c(ns+1)
+
+      ! --- Decide which way to work through the tableau ---
+      IF( 2*ind .LT. N-m )THEN
+        dy  = C(ind+1)
       ELSE
-        dy = d(ns)
-        ns = ns-1
+        dy  = D(ind)
+        ind = ind - 1
       END IF
       y = y + dy
+
     END DO
 
 
-  END SUBROUTINE polint
+  END SUBROUTINE PolynomialInterpolationAndExtrapolation
 
 
 END MODULE UtilitiesModule
