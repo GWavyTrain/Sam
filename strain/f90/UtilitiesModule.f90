@@ -138,7 +138,7 @@ CONTAINS
       IF( j .GE. k )THEN
         CALL PolynomialInterpolationAndExtrapolation &
                ( h(j-kM), s(j-kM), k, 0.0d0, ss, dss )
-        IF( ABS( dss ) .LE. EPS * ABS(ss) ) RETURN
+        IF( ABS( dss ) .LE. EPS * ABS( ss ) ) RETURN
       END IF
       s(j+1) = s(j)
       h(j+1) = 0.25d0 * h(j)
