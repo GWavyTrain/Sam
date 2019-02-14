@@ -5,37 +5,41 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
 
   IMPLICIT NONE
 
-  INTEGER,  PARAMETER :: DP = KIND( 1.d0 )
-  INTEGER,  PARAMETER :: iSnapshotMin = 26, iSnapshotMax = 26
-  INTEGER,  PARAMETER :: nRedshifts = 100000000, &
-                         nFrequenciesAll = 400, nFrequencies = 10, &
-                         nSkip = nFrequenciesAll / nFrequencies, &
-                         nCommentLines = 9
-  INTEGER,  PARAMETER :: iM1 = 7, iM2 = 8, itLb = 10
-  REAL(DP), PARAMETER :: PI = ACOS( -1.0d0 )
-  REAL(DP), PARAMETER :: OMEGA_M = 0.2726d0, OMEGA_L = 0.7274d0, &
-                         H0 = 70.4d0 / 3.086d19
-  REAL(DP), PARAMETER :: z_max = 20.0d0, &
-                         dz = z_max / ( DBLE(nRedshifts) - 1.0d0 )
-  REAL(DP), PARAMETER :: CentimetersPerMpc = 3.086d24, &
-                         SecondsPerYear = 86400.0d0 * 365.25d0, &
-                         SecondsPerGyr  = SecondsPerYear * 1.0d9
-  REAL(DP), PARAMETER :: c = 2.99792458d10, G = 6.673d-8
-  REAL(DP), PARAMETER :: Msun = 1.98892d33, tau = 4.0d0 * SecondsPerYear
-  REAL(DP), PARAMETER :: OneThird = 1.0d0 / 3.0d0
-  REAL(DP)            :: IllustrisData(10)
-  REAL(DP)            :: LISA_all(nFrequenciesAll,2), LISA(nFrequencies)
-  REAL(DP)            :: hc, z, tLb, r, M1, M2, f_ISCO
-  REAL(DP)            :: z_arr(nRedshifts), tLb_z_arr(nRedshifts)
-  INTEGER             :: nMergersPerSnapshot, iSnapshot, iMerger, iStrainFile, i
-  CHARACTER(LEN=9)    :: FMTIN, FMTOUT
-  CHARACTER(LEN=128)  :: FILEIN, FILEOUT, RootPath, &
-                         LookbackTimeRedshiftFile, WriteFile
-  LOGICAL             :: FileExists
+  INTEGER,  PARAMETER   :: DP = KIND( 1.d0 )
+  INTEGER,  PARAMETER   :: iSnapshotMin = 26, iSnapshotMax = 26
+  INTEGER,  PARAMETER   :: nRedshifts = 1000000, &
+                           nFrequenciesAll = 400, nFrequencies = 10, &
+                           nSkip = nFrequenciesAll / nFrequencies, &
+                           nCommentLines = 9
+  INTEGER,  PARAMETER   :: iM1 = 7, iM2 = 8, itLb = 10
+  REAL(DP), PARAMETER   :: PI = ACOS( -1.0d0 ), OneThird = 1.0d0 / 3.0d0
+  REAL(DP), PARAMETER   :: OMEGA_M = 0.2726d0, OMEGA_L = 0.7274d0, &
+                           H0 = 70.4d0 / 3.086d19
+  REAL(DP), PARAMETER   :: z_max = 20.0d0, &
+                           dz = z_max / ( DBLE(nRedshifts) - 1.0d0 )
+  REAL(DP), PARAMETER   :: CentimetersPerMpc = 3.086d24, &
+                           SecondsPerYear = 86400.0d0 * 365.25d0, &
+                           SecondsPerGyr  = SecondsPerYear * 1.0d9
+  REAL(DP), PARAMETER   :: c = 2.99792458d10, G = 6.673d-8
+  REAL(DP), PARAMETER   :: Msun = 1.98892d33, tau = 4.0d0 * SecondsPerYear
+  REAL(DP)              :: IllustrisData(10)
+  REAL(DP)              :: hc, z, tLb, r, M1, M2, f_ISCO
+  REAL(DP), ALLOCATABLE :: LISA_all(:,:), LISA(:), z_arr(:), tLb_z_arr(:)
+  INTEGER               :: i, nMergersPerSnapshot, iSnapshot, &
+                           iMerger, iStrainFile
+  CHARACTER(LEN=9)      :: FMTIN, FMTOUT
+  CHARACTER(LEN=128)    :: FILEIN, FILEOUT, RootPath, &
+                           LookbackTimeRedshiftFile, WriteFile
+  LOGICAL               :: FileExists
 #ifdef _OPENMP
-  INTEGER             :: iThread, nThreads, &
+  INTEGER               :: iThread, nThreads, &
                          OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
 #endif
+
+  ALLOCATE( LISA_all (1:nFrequenciesAll,1:2) )
+  ALLOCATE( LISA     (1:nFrequencies) )
+  ALLOCATE( z_arr    (1:nRedshifts) )
+  ALLOCATE( tLb_z_arr(1:nRedshifts) )
 
   WRITE( RootPath, '(A)' ) '/Users/dunhamsj/Research/GW/Sam/'
 !  WRITE( RootPath, '(A)' ) '/astro1/dunhamsj/'
@@ -76,12 +80,20 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
 
   IF( TRIM(WriteFile) .EQ. 'Y' )THEN
     WRITE(*,'(A,A)') 'Writing file: ', TRIM(LookbackTimeRedshiftFile)
+    DO i = 1, nRedshifts
+      z_arr(i) = ( DBLE(i) - 1.0d0 ) * dz
+    END DO
+    !$OMP PARALLEL DEFAULT(NONE) SHARED(tLb_z_arr,z_arr)
+    !$OMP DO
+    DO i = 1, nRedshifts
+      CALL RombergIntegration &
+             ( Integrand_tLb, 0.0d0, z_arr(i), tLb_z_arr(i) )
+    END DO
+    !$OMP END DO NOWAIT
+    !$OMP END PARALLEL
     OPEN( 100, FILE = TRIM(LookbackTimeRedshiftFile) )
     WRITE( 100, '(A)' ) '# Redshift z, Lookback-Time tLb [Gyr]'
     DO i = 1, nRedshifts
-      z_arr(i) = ( DBLE(i) - 1.0d0 ) * dz
-      CALL RombergIntegration &
-             ( Integrand_tLb, 0.0d0, z_arr(i), tLb_z_arr(i) )
       tLb_z_arr(i) = tLb_z_arr(i) / H0 / SecondsPerGyr
       WRITE( 100, '(ES23.16E3,1x,ES23.16E3)' ) z_arr(i), tLb_z_arr(i)
     END DO
@@ -99,8 +111,8 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
 
   !$OMP PARALLEL DEFAULT(NONE) &
   !$OMP & PRIVATE(iSnapshot,iThread,iStrainFile,FMTIN,FMTOUT,FILEIN,FILEOUT, &
-  !$OMP & FileExists,nMergersPerSnapshot,IllustrisData,M1,M2,tLb, &
-  !$OMP & z,r,f_ISCO,i,hc) &
+  !$OMP &         FileExists,nMergersPerSnapshot,IllustrisData,M1,M2,tLb, &
+  !$OMP &         z,r,f_ISCO,i,hc) &
   !$OMP & SHARED(nThreads,RootPath,LISA,z_arr,tLb_z_arr)
 
   !$OMP DO
@@ -207,6 +219,10 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
   !$OMP END DO NOWAIT
   !$OMP END PARALLEL
 
+  DEALLOCATE( tLb_z_arr )
+  DEALLOCATE( z_arr     )
+  DEALLOCATE( LISA      )
+  DEALLOCATE( LISA_all )
 
 CONTAINS
 
