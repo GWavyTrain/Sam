@@ -7,15 +7,15 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
 
   INTEGER,  PARAMETER :: DP = KIND( 1.d0 )
   INTEGER,  PARAMETER :: iSnapshotMin = 26, iSnapshotMax = 26
-  INTEGER,  PARAMETER :: nRedshifts = 10000000, &
+  INTEGER,  PARAMETER :: nRedshifts = 100000000, &
                          nFrequenciesAll = 400, nFrequencies = 10, &
                          nSkip = nFrequenciesAll / nFrequencies, &
                          nCommentLines = 9
   INTEGER,  PARAMETER :: iM1 = 7, iM2 = 8, itLb = 10
   REAL(DP), PARAMETER :: PI = ACOS( -1.0d0 )
-  REAL(DP), PARAMETER :: OMEGA_M = 0.3d0, OMEGA_L = 0.7d0, &
+  REAL(DP), PARAMETER :: OMEGA_M = 0.2726d0, OMEGA_L = 0.7274d0, &
                          H0 = 70.4d0 / 3.086d19
-  REAL(DP), PARAMETER :: z_max = 25.0d0, &
+  REAL(DP), PARAMETER :: z_max = 20.0d0, &
                          dz = z_max / ( DBLE(nRedshifts) - 1.0d0 )
   REAL(DP), PARAMETER :: CentimetersPerMpc = 3.086d24, &
                          SecondsPerYear = 86400.0d0 * 365.25d0, &
@@ -79,7 +79,7 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
     OPEN( 100, FILE = TRIM(LookbackTimeRedshiftFile) )
     WRITE( 100, '(A)' ) '# Redshift z, Lookback-Time tLb [Gyr]'
     DO i = 1, nRedshifts
-      z_arr    (i) = ( DBLE(i) - 1.0d0 ) * dz
+      z_arr(i) = ( DBLE(i) - 1.0d0 ) * dz
       CALL RombergIntegration &
              ( Integrand_tLb, 0.0d0, z_arr(i), tLb_z_arr(i) )
       tLb_z_arr(i) = tLb_z_arr(i) / H0 / SecondsPerGyr
@@ -246,8 +246,7 @@ CONTAINS
     fr = f * ( 1.0d0 + z )
 
     ! --- Compute chirp mass ---
-    Mc = ( M1 * M2 )**( 3.0d0 / 5.0d0 ) &
-           / ( M1 + M2 )**( 1.0d0 / 5.0d0 ) * Msun
+    Mc = ( ( M1 * M2 )**3 / ( M1 + M2 ) )**( 1.0d0 / 5.0d0 ) * Msun
 
     ! --- Compute strain amplitude, Eq. (2) ---
     h = 8.0d0 * ( PI**2 * ( G * Mc )**5 * fr**2 )**( OneThird ) &

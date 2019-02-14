@@ -126,7 +126,7 @@ CONTAINS
     REAL(DP), INTENT(in)    :: a, b
     REAL(DP), INTENT(inout) :: ss
 
-    REAL(DP), PARAMETER :: EPS = 1.0d-8
+    REAL(DP), PARAMETER :: EPS = 1.0d-15
     INTEGER,  PARAMETER :: jMax = 20, jMaxP = jMax+1, k = 5, kM = k-1
     INTEGER             :: j
     REAL(DP)            :: dss, h(jMaxP), s(jMaxP)
