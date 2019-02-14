@@ -1,14 +1,14 @@
-USE_OpenMP = TRUE
-#USE_OpenMP = FALSE
+USE_OMP = TRUE
+#USE_OMP = FALSE
 
 FC = gfortran
 
-ifeq ($(USE_OpenMP),TRUE)
+ifeq ($(USE_OMP),TRUE)
 	FLAGS = -Wall -fopenmp -cpp
-	SUFFIX = _OpenMP
+	SUFFIX = _OMP.exe
 else
 	FLAGS = -Wall -cpp
-	SUFFIX = 
+	SUFFIX = .exe
 endif
 
 MAIN = ComputeCharacteristicStrainForBHBmergers
