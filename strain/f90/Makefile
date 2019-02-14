@@ -1,5 +1,5 @@
-USE_OpenMP = TRUE
-#USE_OpenMP = FALSE
+#USE_OpenMP = TRUE
+USE_OpenMP = FALSE
 
 FC = gfortran
 

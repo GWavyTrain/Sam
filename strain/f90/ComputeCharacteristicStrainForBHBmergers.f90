@@ -1,12 +1,13 @@
 PROGRAM ComputeCharacteristicStrainForBHBmergers
 
-  USE UtilitiesModule
+  USE UtilitiesModule, ONLY: &
+    RombergIntegration
 
   IMPLICIT NONE
 
   INTEGER,  PARAMETER :: DP = KIND( 1.d0 )
   INTEGER,  PARAMETER :: iSnapshotMin = 26, iSnapshotMax = 26
-  INTEGER,  PARAMETER :: Nq = 1000000, nRedshifts = 1000, &
+  INTEGER,  PARAMETER :: nRedshifts = 10000000, &
                          nFrequenciesAll = 400, nFrequencies = 10, &
                          nSkip = nFrequenciesAll / nFrequencies, &
                          nCommentLines = 9
@@ -17,9 +18,11 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
   REAL(DP), PARAMETER :: z_max = 25.0d0, &
                          dz = z_max / ( DBLE(nRedshifts) - 1.0d0 )
   REAL(DP), PARAMETER :: CentimetersPerMpc = 3.086d24, &
-                         SecondsPerGyr = 86400.0d0 * 365.25d0 * 1.0d9
+                         SecondsPerYear = 86400.0d0 * 365.25d0, &
+                         SecondsPerGyr  = SecondsPerYear * 1.0d9
   REAL(DP), PARAMETER :: c = 2.99792458d10, G = 6.673d-8
-  REAL(DP), PARAMETER :: Msun = 1.98892d33
+  REAL(DP), PARAMETER :: Msun = 1.98892d33, tau = 4.0d0 * SecondsPerYear
+  REAL(DP), PARAMETER :: OneThird = 1.0d0 / 3.0d0
   REAL(DP)            :: IllustrisData(10)
   REAL(DP)            :: LISA_all(nFrequenciesAll,2), LISA(nFrequencies)
   REAL(DP)            :: hc, z, tLb, r, M1, M2, f_ISCO
@@ -29,8 +32,6 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
   CHARACTER(LEN=128)  :: FILEIN, FILEOUT, RootPath, &
                          LookbackTimeRedshiftFile, WriteFile
   LOGICAL             :: FileExists
-  INTEGER             :: N
-  REAL(DP) :: s
 #ifdef _OPENMP
   INTEGER             :: iThread, nThreads, &
                          OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
@@ -79,7 +80,9 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
     WRITE( 100, '(A)' ) '# Redshift z, Lookback-Time tLb [Gyr]'
     DO i = 1, nRedshifts
       z_arr    (i) = ( DBLE(i) - 1.0d0 ) * dz
-      tLb_z_arr(i) = ComputeLookbackTime( z_arr(i) )
+      CALL RombergIntegration &
+             ( Integrand_tLb, 0.0d0, z_arr(i), tLb_z_arr(i) )
+      tLb_z_arr(i) = tLb_z_arr(i) / H0 / SecondsPerGyr
       WRITE( 100, '(ES23.16E3,1x,ES23.16E3)' ) z_arr(i), tLb_z_arr(i)
     END DO
     CLOSE( 100 )
@@ -167,7 +170,8 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
       z = InterpolateLookbackTimeToGetRedshift( tLb, z_arr, tLb_z_arr )
         
       ! --- Compute comoving distance (in Mpc) ---
-      r = ComputeComovingDistance( z )
+      CALL RombergIntegration( Integrand_r, 0.0d0, z, r )
+      r = r * c / H0
 
       ! --- Calculate frequency at ISCO using Sesana et al., (2005) ---
       f_ISCO = c**3 / ( 6.0d0**( 3.0d0 / 2.0d0 ) * PI * G &
@@ -175,12 +179,12 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
 
       WRITE( iStrainFile, &
              '(ES12.6E2,ES13.6E2,ES18.11E2,ES18.11E2,ES18.11E2,ES18.11E2)', &
-              ADVANCE = 'NO' ) M1, M2, tLb, z, r, f_ISCO
+              ADVANCE = 'NO' ) M1, M2, tLb, z, r / CentimetersPerMpc, f_ISCO
         
       ! --- Loop through frequencies until f_ISCO ---
       i = 1
       DO WHILE( ( LISA(i) .LT. f_ISCO ) .AND. ( i .LE. nFrequencies ) )
-        hc = ComputeCharacteristicStrain( M1, M2, LISA(i), r )
+        hc = ComputeCharacteristicStrain( M1, M2, LISA(i), r, z )
         WRITE( iStrainFile, '(ES18.11E2)', ADVANCE = 'NO' ) hc
         i = i + 1
       END DO
@@ -208,87 +212,56 @@ CONTAINS
 
 
   ! --- Integrand E(z) in cosmological distance calculation ---
-  PURE REAL(DP) FUNCTION E( z )
+  PURE REAL(DP) FUNCTION Integrand_r( z )
 
     REAL(DP), INTENT(in) :: z
 
-    E = 1.0d0 / SQRT( OMEGA_M * ( 1.0d0 + z )**3 + OMEGA_L )
+    Integrand_r = 1.0d0 / SQRT( OMEGA_M * ( 1.0d0 + z )**3 + OMEGA_L )
 
     RETURN
-  END FUNCTION E
+  END FUNCTION Integrand_r
 
 
-  FUNCTION ComputeComovingDistance( z ) RESULT( r )
-
-    REAL(DP), INTENT(in) :: z
-    REAL(DP)             :: r, dz
-    INTEGER              :: k
-
-    ! --- Integrate with Trapezoidal rule ---
-    r  = 0.0d0
-    dz = z / Nq
-    
-    DO k = 1, Nq - 1
-       r = r + E( k * dz )
-    END DO
-
-    r = c / H0 / CentimetersPerMpc &
-           * dz / 2.0d0 * ( E( 0.0d0 ) + 2.0d0 * r + E( z ) )
-
-    RETURN
-  END FUNCTION ComputeComovingDistance
-
-  
   ! --- Integrand in lookback time calculation ---
-  PURE REAL(DP) FUNCTION E_Lb( z )
+  PURE REAL(DP) FUNCTION Integrand_tLb( z )
 
     REAL(DP), INTENT(in) :: z
 
-    E_Lb = 1.0d0 / ( ( 1.0d0 + z ) &
-             * SQRT( OMEGA_M * ( 1.0d0 + z )**3 + OMEGA_L ) )
+    Integrand_tLb = 1.0d0 / ( ( 1.0d0 + z ) &
+                      * SQRT( OMEGA_M * ( 1.0d0 + z )**3 + OMEGA_L ) )
     
     RETURN
-  END FUNCTION E_Lb
-
-
-  ! --- Returns look-back time in Gyr ---
-  REAL(DP) FUNCTION ComputeLookbackTime( z ) RESULT( tLb )
-
-    REAL(DP), INTENT(in) :: z
-    REAL(DP)             :: dz
-    INTEGER              :: k
-
-    dz = z / DBLE(Nq)
-
-    ! --- Integrate with Trapezoidal rule ---
-    tLb = 0.0d0
-    DO k = 1, Nq - 1
-      tLb = tLb + E_Lb( k * dz )
-    END DO
-
-    tLb = 1.0d0 / H0 / SecondsPerGyr &
-            * dz / 2.0d0 * ( E_Lb( 0.0d0 ) + 2.0d0 * tLb + E_Lb( z ) )
-    
-    RETURN
-  END FUNCTION ComputeLookbackTime
+  END FUNCTION Integrand_tLb
 
   
   ! --- Characteristic strain (dimensionless)
-  !       from Sesana et al. (2005), Eq. (6) ---
-  FUNCTION ComputeCharacteristicStrain( M1, M2, f, r ) RESULT( hc )
+  !       from Sesana et al. (2005), ApJ, 623, 23 ---
+  FUNCTION ComputeCharacteristicStrain( M1, M2, f, r, z ) RESULT( hc )
 
-    REAL(DP) , INTENT(in)  :: M1, M2, f, r
-    REAL(DP)               :: Mc
-    REAL(DP)               :: hc, rcm
+    REAL(DP), INTENT(in) :: M1, M2, f, r, z
+    REAL(DP)             :: Mc
+    REAL(DP)             :: hc, h, fr, n
 
-    rcm = r * CentimetersPerMpc
+    ! --- Convert observation-frame redshift to source(rest)-frame redshift ---
+    fr = f * ( 1.0d0 + z )
 
-    ! --- Compute chirp mass (in source frame) ---
+    ! --- Compute chirp mass ---
     Mc = ( M1 * M2 )**( 3.0d0 / 5.0d0 ) &
            / ( M1 + M2 )**( 1.0d0 / 5.0d0 ) * Msun
 
-    hc = 1.0d0 / ( SQRT( 3.0d0 * c**3 ) * PI**( 2.0d0 / 3.0d0 ) * rcm ) &
-           * ( G * Mc )**( 5.0d0 / 6.0d0 ) * f**( -1.0d0 / 6.0d0 )
+    ! --- Compute strain amplitude, Eq. (2) ---
+    h = 8.0d0 * ( PI**2 * ( G * Mc )**5 * fr**2 )**( OneThird ) &
+          / ( SQRT( 10.0d0 ) * c**4 * r )
+
+    ! --- Number of cycles in frequency range df~f, Eq. (4) ---
+    n = 5.0d0 / 96.0d0 * c**5 &
+          / ( PI**8 * ( G * Mc * fr )**5 )**( OneThird )
+
+    IF( n .LT. f * tau )THEN
+      hc = h * SQRT( n )
+    ELSE
+      hc = h * SQRT( f * tau )
+    END IF
 
     RETURN
   END FUNCTION ComputeCharacteristicStrain
@@ -357,13 +330,6 @@ CONTAINS
 
     RETURN
   END FUNCTION InterpolateLookbackTimeToGetRedshift
-
-
-  PURE REAL(DP) FUNCTION Func(x) RESULT(y)
-    REAL(DP), INTENT(in) :: x
-    y = x**2
-    RETURN
-  END FUNCTION Func
 
 
 END PROGRAM ComputeCharacteristicStrainForBHBmergers
