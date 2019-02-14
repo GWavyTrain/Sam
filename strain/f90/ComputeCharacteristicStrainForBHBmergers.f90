@@ -80,9 +80,11 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
 
   IF( TRIM(WriteFile) .EQ. 'Y' )THEN
     WRITE(*,'(A,A)') 'Writing file: ', TRIM(LookbackTimeRedshiftFile)
+
     DO i = 1, nRedshifts
       z_arr(i) = ( DBLE(i) - 1.0d0 ) * dz
     END DO
+
     !$OMP PARALLEL DEFAULT(NONE) SHARED(tLb_z_arr,z_arr)
     !$OMP DO
     DO i = 1, nRedshifts
@@ -91,6 +93,7 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
     END DO
     !$OMP END DO NOWAIT
     !$OMP END PARALLEL
+
     OPEN( 100, FILE = TRIM(LookbackTimeRedshiftFile) )
     WRITE( 100, '(A)' ) '# Redshift z, Lookback-Time tLb [Gyr]'
     DO i = 1, nRedshifts
@@ -98,12 +101,13 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
       WRITE( 100, '(ES23.16E3,1x,ES23.16E3)' ) z_arr(i), tLb_z_arr(i)
     END DO
     CLOSE( 100 )
+
   ELSE
     OPEN( 100, FILE = TRIM(LookbackTimeRedshiftFile) )
-      READ( 100, * )
-      DO i = 1, nRedshifts
-        READ( 100, '(ES23.16E3,1x,ES23.16E3)' ) z_arr(i), tLb_z_arr(i)
-      END DO
+    READ( 100, * )
+    DO i = 1, nRedshifts
+      READ( 100, '(ES23.16E3,1x,ES23.16E3)' ) z_arr(i), tLb_z_arr(i)
+    END DO
     CLOSE( 100 )
   END IF
 
@@ -268,7 +272,7 @@ CONTAINS
     h = 8.0d0 * ( PI**2 * ( G * Mc )**5 * fr**2 )**( OneThird ) &
           / ( SQRT( 10.0d0 ) * c**4 * r )
 
-    ! --- Number of cycles in frequency range df~f, Eq. (4) ---
+    ! --- Compute number of cycles in frequency range df~f, Eq. (4) ---
     n = 5.0d0 / 96.0d0 * c**5 &
           / ( PI**8 * ( G * Mc * fr )**5 )**( OneThird )
 
