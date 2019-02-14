@@ -126,13 +126,14 @@ CONTAINS
     REAL(DP), INTENT(in)    :: a, b
     REAL(DP), INTENT(inout) :: ss
 
-    REAL(DP), PARAMETER :: EPS = 1.0d-15
+    REAL(DP), PARAMETER :: EPS = 1.0d-11
     INTEGER,  PARAMETER :: jMax = 20, jMaxP = jMax+1, k = 5, kM = k-1
-    INTEGER             :: j
     REAL(DP)            :: dss, h(jMaxP), s(jMaxP)
+    INTEGER             :: j
 
-    ss = 0.0d0
+    ss   = 0.0d0
     h(1) = 1.0d0
+
     DO j = 1, jMax
       CALL TrapezoidalRule( Func, a, b, s(j), j )
       IF( j .GE. k )THEN
@@ -143,6 +144,7 @@ CONTAINS
       s(j+1) = s(j)
       h(j+1) = 0.25d0 * h(j)
     END DO
+
     STOP 'Too many steps in RombergIntegration'
     
   END SUBROUTINE RombergIntegration
