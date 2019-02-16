@@ -1,26 +1,30 @@
-USE_OMP = TRUE
-#USE_OMP = FALSE
+FLAGS  = -cpp
 
-FC = gfortran
+ifeq ($(DEBUG),TRUE)
+    FLAGS += -Wall
+endif
 
 ifeq ($(USE_OMP),TRUE)
-	FLAGS = -Wall -fopenmp -cpp
-	SUFFIX = _OMP.exe
-else
-	FLAGS = -Wall -cpp
-	SUFFIX = .exe
+    FLAGS += -fopenmp
 endif
 
 MAIN = ComputeCharacteristicStrainForBHBmergers
+TEST = ModuleTester
 
-SRC = UtilitiesModule.f90 $(MAIN).f90
-OBJ = UtilitiesModule.o $(MAIN).o
+SRC  = $(DIR)/UtilitiesModule.f90 $(DIR)/$(MAIN).f90
+OBJ  = UtilitiesModule.o $(MAIN).o
+SRC2 = $(DIR)/UtilitiesModule.f90 $(DIR)/$(TEST).f90
+OBJ2 = UtilitiesModule.o $(TEST).o
 
-all: $(MAIN)
+all: $(MAIN) $(TEST)
 
 $(MAIN):
 	$(FC) $(FLAGS) -c $(SRC)
-	$(FC) $(FLAGS) -o $(MAIN)$(SUFFIX) $(OBJ)
+	$(FC) $(FLAGS) -o $(MAIN).exe $(OBJ)
+
+$(TEST):
+	$(FC) $(FLAGS) -c $(SRC2)
+	$(FC) $(FLAGS) -o $(TEST).exe $(OBJ2)
 
 clean:
-	rm -f $(MAIN)$(SUFFIX) *.o *.mod
+	rm -rf *.exe *.dSYM *.o *.mod

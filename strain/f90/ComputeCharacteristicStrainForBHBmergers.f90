@@ -7,12 +7,12 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
 
   INTEGER,  PARAMETER   :: DP = KIND( 1.d0 )
   INTEGER,  PARAMETER   :: iSnapshotMin = 26, iSnapshotMax = 26
-  INTEGER,  PARAMETER   :: nRedshifts = 10000000, &
+  INTEGER,  PARAMETER   :: nRedshifts = 10000, &
                            nFrequenciesAll = 400, nFrequencies = 10, &
                            nSkip = nFrequenciesAll / nFrequencies, &
                            nCommentLines = 9
   INTEGER,  PARAMETER   :: iM1 = 7, iM2 = 8, itLb = 10
-  REAL(DP), PARAMETER   :: PI = ACOS( -1.0d0 ), OneThird = 1.0d0 / 3.0d0
+  REAL(DP), PARAMETER   :: PI = ACOS( -1.0d0 )
   REAL(DP), PARAMETER   :: OMEGA_M = 0.2726d0, OMEGA_L = 0.7274d0, &
                            H0 = 70.4d0 / 3.086d19
   REAL(DP), PARAMETER   :: z_max = 20.0d0, &
@@ -29,11 +29,11 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
                            iMerger, iStrainFile
   CHARACTER(LEN=9)      :: FMTIN, FMTOUT
   CHARACTER(LEN=128)    :: FILEIN, FILEOUT, RootPath, &
-                           LookbackTimeRedshiftFile, WriteFile
+                           LookbackTimeRedshiftFile, WriteFile, FMThc
   LOGICAL               :: FileExists
 #ifdef _OPENMP
   INTEGER               :: iThread, nThreads, &
-                         OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
+                           OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
 #endif
 
   ALLOCATE( LISA_all (1:nFrequenciesAll,1:2) )
@@ -45,7 +45,7 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
 !  WRITE( RootPath, '(A)' ) '/astro1/dunhamsj/'
 
   ! === Read in frequencies from LISA sensitivity curve data file ===
-  OPEN( 100, FILE = TRIM(RootPath) // 'LISA_sensitivity.dat' )
+  OPEN( 100, FILE = TRIM( RootPath ) // 'LISA_sensitivity.dat' )
   ! --- Loop through comment lines ---
   DO i = 1, nCommentLines
     READ( 100, * )
@@ -69,17 +69,17 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
   WRITE( LookbackTimeRedshiftFile, '(A,I10.10,A)' ) &
          TRIM(RootPath) // 'strain/f90/tLb_z_', nRedshifts, '.dat'
 
-  INQUIRE( FILE = TRIM(LookbackTimeRedshiftFile), EXIST = FileExists )
+  INQUIRE( FILE = TRIM( LookbackTimeRedshiftFile ), EXIST = FileExists )
   IF( .NOT. FileExists )THEN
     WriteFile = 'Y'
   ELSE
     WRITE(*,'(A,A,A)') &
-      'File ', TRIM(LookbackTimeRedshiftFile), ' exists. Overwrite? (Y/N) '
+      'File ', TRIM( LookbackTimeRedshiftFile ), ' exists. Overwrite? (Y/N) '
     READ(*,*) WriteFile
   END IF
 
-  IF( TRIM(WriteFile) .EQ. 'Y' )THEN
-    WRITE(*,'(A,A)') 'Writing file: ', TRIM(LookbackTimeRedshiftFile)
+  IF( TRIM( WriteFile ) .EQ. 'Y' )THEN
+    WRITE(*,'(A,A)') 'Writing file: ', TRIM( LookbackTimeRedshiftFile )
 
     DO i = 1, nRedshifts
       z_arr(i) = ( DBLE(i) - 1.0d0 ) * dz
@@ -94,30 +94,31 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
     !$OMP END DO NOWAIT
     !$OMP END PARALLEL
 
-    OPEN( 100, FILE = TRIM(LookbackTimeRedshiftFile) )
+    OPEN( 100, FILE = TRIM( LookbackTimeRedshiftFile ) )
     WRITE( 100, '(A)' ) '# Redshift z, Lookback-Time tLb [Gyr]'
     DO i = 1, nRedshifts
       tLb_z_arr(i) = tLb_z_arr(i) / H0 / SecondsPerGyr
-      WRITE( 100, '(ES23.16E3,1x,ES23.16E3)' ) z_arr(i), tLb_z_arr(i)
+      WRITE( 100, '(F14.11,1x,F14.11)' ) z_arr(i), tLb_z_arr(i)
     END DO
     CLOSE( 100 )
 
   ELSE
-    OPEN( 100, FILE = TRIM(LookbackTimeRedshiftFile) )
+    OPEN( 100, FILE = TRIM( LookbackTimeRedshiftFile ) )
     READ( 100, * )
     DO i = 1, nRedshifts
-      READ( 100, '(ES23.16E3,1x,ES23.16E3)' ) z_arr(i), tLb_z_arr(i)
+      READ( 100, '(F14.11,1x,F14.11)' ) z_arr(i), tLb_z_arr(i)
     END DO
     CLOSE( 100 )
   END IF
 
+  WRITE( FMThc, '(A)' ) '(2F8.4,2F14.10,3ES12.5E2)'
   ! === Loop through Illustris snapshots ===
 
   !$OMP PARALLEL DEFAULT(NONE) &
   !$OMP & PRIVATE(iSnapshot,iThread,iStrainFile,FMTIN,FMTOUT,FILEIN,FILEOUT, &
   !$OMP &         FileExists,nMergersPerSnapshot,IllustrisData,M1,M2,tLb, &
   !$OMP &         z,r,f_ISCO,i,hc) &
-  !$OMP & SHARED(nThreads,RootPath,LISA,z_arr,tLb_z_arr)
+  !$OMP & SHARED(nThreads,RootPath,LISA,z_arr,tLb_z_arr,FMThc)
 
   !$OMP DO
   DO iSnapshot = iSnapshotMin, iSnapshotMax
@@ -142,7 +143,7 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
       FMTOUT = '(A,I3,A4)'
     END IF
 
-    WRITE( FILEIN, FMTIN ) TRIM(RootPath) // &
+    WRITE( FILEIN, FMTIN ) TRIM( RootPath ) // &
                            'BBHM_DataFiles_Mapelli/time_BHillustris1_', &
                            iSnapshot, '.dat'
 
@@ -150,7 +151,7 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
     IF( .NOT. FileExists ) CYCLE
 
     WRITE( FILEOUT, FMTOUT ) &
-      TRIM(RootPath) // 'strain/f90/StrainFiles/hc_', iSnapshot, '.dat'
+      TRIM( RootPath ) // 'strain/f90/StrainFiles/hc_', iSnapshot, '.dat'
 
     ! --- Create file for storing strains (first row will hold frequencies) ---
     OPEN ( iStrainFile, FILE = TRIM( FILEOUT ) )
@@ -159,9 +160,11 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
       & Redshift at merge, Comoving distance to merger [Mpc], fISCO,&
       & Characteristic strain (', nFrequencies, ') entries)'
     WRITE( iStrainFile, '(A)' ) '# (First row contains LISA frequencies [Hz])'
-    WRITE( iStrainFile, '(ES12.6E2,ES13.6E2,ES18.11E2, &
-                & ES18.11E2,E18.11E2,E18.11E2,10ES18.11E2)' ) &
-                0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, LISA(:)
+    WRITE( iStrainFile, TRIM( FMThc ), ADVANCE = 'NO' ) &
+      0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0
+    DO i = 1, nFrequencies
+      WRITE( iStrainFile, '(ES24.16E2)', ADVANCE = 'NO' ) LISA(i)
+    END DO
 
     ! --- Get number of lines (mergers) in Illustris data file ---
     nMergersPerSnapshot = 0
@@ -193,21 +196,20 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
       f_ISCO = c**3 / ( 6.0d0**( 3.0d0 / 2.0d0 ) * PI * G &
                  * ( M1 + M2 ) * Msun  * ( 1.0d0 + z ) )
 
-      WRITE( iStrainFile, &
-             '(ES12.6E2,ES13.6E2,ES18.11E2,ES18.11E2,ES18.11E2,ES18.11E2)', &
-              ADVANCE = 'NO' ) M1, M2, tLb, z, r / CentimetersPerMpc, f_ISCO
+      WRITE( iStrainFile, TRIM( FMThc ), ADVANCE = 'NO' ) &
+        M1, M2, tLb, z, r / CentimetersPerMpc, f_ISCO
         
       ! --- Loop through frequencies until f_ISCO ---
       i = 1
       DO WHILE( ( LISA(i) .LT. f_ISCO ) .AND. ( i .LE. nFrequencies ) )
         hc = ComputeCharacteristicStrain( M1, M2, LISA(i), r, z )
-        WRITE( iStrainFile, '(ES18.11E2)', ADVANCE = 'NO' ) hc
+        WRITE( iStrainFile, '(ES12.5E2)', ADVANCE = 'NO' ) hc
         i = i + 1
       END DO
 
       ! --- Fill in missing frequencies with 0.0d0 ---
       DO WHILE( i .LE. nFrequencies )
-        WRITE( iStrainFile, '(f4.1)' , ADVANCE = 'NO' ) 0.0d0
+        WRITE( iStrainFile, '(I2.1)' , ADVANCE = 'NO' ) 0
         i = i + 1
       END DO
 
@@ -227,6 +229,7 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
   DEALLOCATE( z_arr     )
   DEALLOCATE( LISA      )
   DEALLOCATE( LISA_all )
+
 
 CONTAINS
 
@@ -269,12 +272,12 @@ CONTAINS
     Mc = ( ( M1 * M2 )**3 / ( M1 + M2 ) )**( 1.0d0 / 5.0d0 ) * Msun
 
     ! --- Compute strain amplitude, Eq. (2) ---
-    h = 8.0d0 * ( PI**2 * ( G * Mc )**5 * fr**2 )**( OneThird ) &
+    h = 8.0d0 * ( PI**2 * ( G * Mc )**5 * fr**2 )**( 1.0d0 / 3.0d0 ) &
           / ( SQRT( 10.0d0 ) * c**4 * r )
 
     ! --- Compute number of cycles in frequency range df~f, Eq. (4) ---
     n = 5.0d0 / 96.0d0 * c**5 &
-          / ( PI**8 * ( G * Mc * fr )**5 )**( OneThird )
+          / ( PI**8 * ( G * Mc * fr )**5 )**( 1.0d0 / 3.0d0 )
 
     IF( n .LT. f * tau )THEN
       hc = h * SQRT( n )
@@ -299,7 +302,8 @@ CONTAINS
 
     ! --- Small lookback time approximation: tLb ~ tH * z ---
     IF( tLb .LT. 0.5d0 ) THEN
-      IF( DEBUG ) WRITE(*,*) 'Using small lookback-time approximation...'
+      IF( DEBUG ) WRITE(*,'(A5,A)') &
+                    '', 'Using small lookback-time approximation...'
       z = tLb * ( H0 * SecondsPerGyr )
       RETURN
     END IF
@@ -307,12 +311,12 @@ CONTAINS
     ! --- Interpolate using linear interpolation ---
     IF( tLb .LT. tLb_z_arr(nRedshifts-1) ) THEN
 
-      IF( DEBUG ) WRITE(*,*) 'Interpolating...'
+      IF( DEBUG ) WRITE(*,'(A5,A)') '', 'Interpolating...'
 
       ! --- Get redshift bounds ---
       k = 1
       tLb_k = tLb_z_arr(k)
-      DO WHILE( tLb_k .LT. tLb )
+      DO WHILE( ( tLb_k .LT. tLb ) .AND. ( k .LE. nRedshifts ) )
          k = k + 1
          tLb_k = tLb_z_arr(k)
       END DO
@@ -325,7 +329,7 @@ CONTAINS
     ! --- Extrapolate using linear extrapolation ---
     ELSE
 
-      IF( DEBUG ) WRITE(*,*) 'Extrapolating...'
+      IF( DEBUG ) WRITE(*,'(A5,A)') '', 'Extrapolating...'
 
       zMin   = z_arr    (nRedshifts-1)
       zMax   = z_arr    (nRedshifts  )
@@ -341,10 +345,10 @@ CONTAINS
     z = ( tLb - b ) / m
 
     IF( DEBUG )THEN
-      WRITE(*,*) 'tLbMin = ', tLbMin
-      WRITE(*,*) 'tLb    = ', tLb
-      WRITE(*,*) 'tLbMax = ', tLbMax
-      WRITE(*,*) 'z      = ', z
+      WRITE(*,'(A5,A,F13.10)') '', 'tLbMin = ', tLbMin
+      WRITE(*,'(A5,A,F13.10)') '', 'tLb    = ', tLb
+      WRITE(*,'(A5,A,F13.10)') '', 'tLbMax = ', tLbMax
+      WRITE(*,'(A5,A,F13.10)') '', 'z      = ', z
       WRITE(*,*)
     END IF
 
