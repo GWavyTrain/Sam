@@ -60,6 +60,18 @@ counts = np.sum( CountData, axis = 0 )
 
 # --- Plotting ---
 
+#'''
+# Total number of BHB mergers as a function of lookback-time
+fig, ax = plt.subplots()
+ax.step( Bins, counts )
+ax.set_xlabel( r'$t_{lb}\,\left[Gyr\right]$' )
+ax.set_ylabel( r'$N_{BHB}$' )
+ax.set_yscale('log')
+ax.set_xlim( 0.0, 14.0 )
+plt.show()
+plt.close()
+#'''
+
 '''
 # Mapelli, Figure 1
 Vc = ( 0.1065 )**3
@@ -77,6 +89,7 @@ plt.show()
 plt.close()
 '''
 
+'''
 # --- Compute co-moving volumes for lookback-times ---
 from scipy.interpolate import interp1d
 Gpc  = 3.086e25 # [ m / Gpc ]
@@ -96,3 +109,4 @@ ax.set_yscale('log')
 #plt.savefig( BasePath + 'MergerRateDensity/RBHB_Vc.png' )
 plt.show()
 plt.close()
+'''
