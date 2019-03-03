@@ -197,7 +197,7 @@ PROGRAM ComputeCharacteristicStrainForBHBmergers
         i = i + 1
       END DO
 
-      ! --- Fill in missing frequencies with 0.0d0 ---
+      ! --- Fill in missing frequencies with 0 ---
       DO WHILE( i .LE. nFrequencies )
         WRITE( iStrainFile, '(I2.1)' , ADVANCE = 'NO' ) 0
         i = i + 1
